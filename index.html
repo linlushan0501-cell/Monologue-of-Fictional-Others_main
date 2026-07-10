@@ -6,14 +6,13 @@
     <meta name="description" content="Monologue of Fictional Others 研究生成工具" />
     <title>Monologue of Fictional Others</title>
     <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="compact.css" />
   </head>
   <body>
     <main class="app-shell">
       <section class="onboarding-view" id="participant-view">
         <header class="onboarding-header">
-          <p class="eyebrow">01 / Participant</p>
           <h1>welcome</h1>
-          <p>建立或選擇參與者，開始這次研究紀錄。</p>
         </header>
         <div class="participant-form">
           <label><span>目前參與者</span><select id="participant-select"></select></label>
@@ -29,13 +28,12 @@
 
       <section class="onboarding-view" id="need-view" hidden>
         <header class="onboarding-header">
-          <p class="eyebrow">02 / Key event</p>
           <h1>生命中的關鍵事件</h1>
-          <p>請先從以下五個方向，找出你曾經發生、正在經歷，或尚未發生的關鍵事件。</p>
+          <p>請先從以下五個方向，找出你曾經發生、正在經歷，或尚未發生的關鍵事件</p>
         </header>
         <div class="need-list" id="need-list"></div>
         <div class="onboarding-actions">
-          <button class="button button-secondary" id="need-back" type="button">返回</button>
+          <button class="back-arrow" id="need-back" aria-label="返回" type="button">←</button>
           <button class="button button-primary" id="need-next" type="button">下一步</button>
         </div>
       </section>
@@ -53,7 +51,6 @@
         <section class="step-section" data-section="event">
           <div class="section-heading">
             <div><p class="eyebrow">01 / Event</p><h2>事件與時間</h2></div>
-            <button class="text-button" id="change-need" type="button">重新選擇提示</button>
           </div>
           <aside class="need-context" id="selected-need-context"></aside>
           <div class="scenario-grid">
@@ -74,20 +71,15 @@
               </div>
             </article>
           </div>
-          <button class="button button-primary section-next" data-go-step="characters" type="button">下一步：設定他者</button>
         </section>
 
         <section class="step-section" data-section="characters" hidden>
-          <div class="section-heading"><div><p class="eyebrow">02 / Others</p><h2>他者角色</h2></div><span class="section-note">至少 2 位，最多 3 位</span></div>
+          <div class="section-heading"><div><p class="eyebrow">02 / Others</p><h2>他者角色</h2></div></div>
           <div class="character-list" id="character-list"></div>
-          <div class="section-actions">
-            <button class="button button-secondary" id="add-character" type="button">＋ 新增第三位他者</button>
-            <button class="button button-primary" data-go-step="generate" type="button">下一步：開始生成</button>
-          </div>
         </section>
 
         <section class="step-section" data-section="generate" hidden>
-          <div class="section-heading"><div><p class="eyebrow">03 / Generate</p><h2>單筆生成</h2></div><span class="section-note">一次生成一個組合，自動寫入 Notion</span></div>
+          <div class="section-heading"><div><p class="eyebrow">03 / Generate</p><h2>單筆生成</h2></div></div>
           <div class="generation-layout">
             <article class="generation-controls">
               <label><span>選擇他者</span><select id="character-select"></select></label>
@@ -115,7 +107,7 @@
 
     <template id="character-template">
       <article class="character-card">
-        <div class="character-card-header"><strong class="card-title"></strong><button class="remove-character" type="button">移除</button></div>
+        <div class="character-card-header"><strong class="card-title"></strong></div>
         <div class="character-fields">
           <label><span>他者名稱</span><input data-field="name" placeholder="例如：爸爸" /></label>
           <label><span>選擇原因</span><input data-field="selectionReason" placeholder="為什麼選擇這個角色" /></label>

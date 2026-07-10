@@ -35,7 +35,7 @@ function createParticipant(index) {
     realFutureTimePoint: "",
     counterfactualPastTimePoint: "",
     counterfactualFutureTimePoint: "",
-    characters: [createCharacter(1), createCharacter(2)],
+    characters: [createCharacter(1), createCharacter(2), createCharacter(3)],
   };
 }
 const firstParticipant = createParticipant(1);
@@ -62,10 +62,10 @@ function normalizeParticipant(participant = {}, index = 1) {
   next.realFutureTimePoint ||= legacyFuture;
   next.counterfactualPastTimePoint ||= legacyPast;
   next.counterfactualFutureTimePoint ||= legacyFuture;
-  next.characters = (participant.characters?.length ? participant.characters : [createCharacter(1), createCharacter(2)])
+  next.characters = (participant.characters?.length ? participant.characters : [createCharacter(1), createCharacter(2), createCharacter(3)])
     .slice(0, 3)
     .map((character, characterIndex) => ({ id: character.id || `character-${Date.now()}-${characterIndex}`, name: character.name || "", selectionReason: character.selectionReason || "" }));
-  while (next.characters.length < 2) next.characters.push(createCharacter(next.characters.length + 1));
+  while (next.characters.length < 3) next.characters.push(createCharacter(next.characters.length + 1));
   return next;
 }
 function loadState() {
@@ -212,9 +212,8 @@ function renderCharacters() {
     const fragment = byId("character-template").content.cloneNode(true); const card = fragment.querySelector(".character-card");
     fragment.querySelector(".card-title").textContent = `他者 ${String(index + 1).padStart(2, "0")}`;
     fragment.querySelectorAll("input").forEach((input) => { input.value = character[input.dataset.field] || ""; input.addEventListener("input", (event) => updateCharacter(character.id, input.dataset.field, event.target.value)); });
-    const remove = fragment.querySelector(".remove-character"); remove.hidden = participant.characters.length <= 2; remove.addEventListener("click", () => removeCharacter(character.id)); list.appendChild(fragment);
+    list.appendChild(fragment);
   });
-  byId("add-character").disabled = participant.characters.length >= 3;
 }
 function renderGenerationControls() {
   const participant = getActiveParticipant(); const select = byId("character-select");
@@ -250,12 +249,11 @@ function bindStaticEvents() {
   byId("add-participant").addEventListener("click", () => { const participant = createParticipant(state.participants.length + 1); state.participants.push(participant); state.activeParticipantId = participant.id; state.selectedCharacterId = participant.characters[0].id; saveState(); render(); });
   byId("delete-participant").addEventListener("click", () => { if (state.participants.length <= 1 || !window.confirm("確定刪除這位參與者與其生成紀錄？")) return; const id = state.activeParticipantId; state.participants = state.participants.filter((participant) => participant.id !== id); state.generations = state.generations.filter((generation) => generation.participantId !== id); state.activeParticipantId = state.participants[0].id; state.selectedCharacterId = state.participants[0].characters[0].id; saveState(); render(); });
   byId("participant-next").addEventListener("click", () => setView("need")); byId("need-back").addEventListener("click", () => setView("participant")); byId("need-next").addEventListener("click", () => setStep("event"));
-  byId("change-need").addEventListener("click", () => setView("need")); byId("return-to-participant").addEventListener("click", () => setView("participant"));
+  byId("return-to-participant").addEventListener("click", () => setView("participant"));
   document.querySelectorAll("[data-step]").forEach((button) => button.addEventListener("click", () => setStep(button.dataset.step)));
   document.querySelectorAll("[data-go-step]").forEach((button) => button.addEventListener("click", () => setStep(button.dataset.goStep)));
   const fields = { "real-event": "realEventDescription", "counterfactual-event": "counterfactualDescription", "real-past-time": "realPastTimePoint", "real-future-time": "realFutureTimePoint", "counterfactual-past-time": "counterfactualPastTimePoint", "counterfactual-future-time": "counterfactualFutureTimePoint" };
   Object.entries(fields).forEach(([id, field]) => byId(id).addEventListener("input", (event) => updateParticipant(field, event.target.value)));
-  byId("add-character").addEventListener("click", () => { const participant = getActiveParticipant(); if (participant.characters.length >= 3) return; updateActiveParticipant({ characters: [...participant.characters, createCharacter(participant.characters.length + 1)] }); render(); });
   byId("character-select").addEventListener("change", (event) => { state.selectedCharacterId = event.target.value; saveState(); renderGeneratedViews(); });
   document.querySelectorAll("[data-condition]").forEach((button) => button.addEventListener("click", () => { state.selectedCondition = button.dataset.condition; saveState(); renderGenerationControls(); renderGeneratedViews(); }));
   document.querySelectorAll("[data-time]").forEach((button) => button.addEventListener("click", () => { state.selectedTimePoint = button.dataset.time; saveState(); renderGenerationControls(); renderGeneratedViews(); }));

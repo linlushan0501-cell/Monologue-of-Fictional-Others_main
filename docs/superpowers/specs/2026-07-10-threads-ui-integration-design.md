@@ -270,3 +270,16 @@ The phase is complete when:
 - The 18 possible combinations are visible and navigable for three roles.
 - Automated tests pass and desktop/mobile browser QA shows no blocking issues.
 - The folder is ready for the user to commit and push through GitHub Desktop for Vercel deployment.
+
+## Approved Visual Refinement — 2026-07-10
+
+The annotated Frame 1–5 screenshots supersede earlier spacing and role-count details without changing the API integration.
+
+- Pages 1–4 must fit their complete primary content within a typical laptop viewport; page 5 may scroll.
+- Scale down headings, whitespace, cards, inputs, controls, and section gaps consistently while retaining readable typography.
+- Page 1 removes the eyebrow and supporting sentence, gives Add and Delete equal-width outlines, and anchors Next at bottom right.
+- Page 2 removes the eyebrow, removes the final punctuation from the supporting sentence, uses a small top-left back arrow, and anchors Next at bottom right.
+- Page 3 removes the change-prompt control and the section Next button; navigation uses the top tabs.
+- Page 4 always contains exactly three roles. Remove the role-count note, add-role button, remove-role controls, and section Next button.
+- Page 5 removes the Notion helper note and tightens the space above the generation-record heading and matrix.
+- OpenAI generation, Notion persistence, image reservation, generation snapshots, and API fields remain unchanged.

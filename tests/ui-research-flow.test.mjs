@@ -22,7 +22,6 @@ assert.match(script, /function selectNeed\(needId\)/, "Need cards should update 
 assert.match(script, /function renderNeedSelection\(\)/, "Need cards should render from state.");
 assert.match(script, /window\.confirm/, "Participant deletion should require confirmation.");
 assert.match(html, /id="selected-need-context"/, "Event view should show the selected need prompt.");
-assert.match(script, /function removeCharacter\(characterId\)/, "Role rows should be removable.");
 assert.doesNotMatch(html, /data-field="relationship"/, "Role UI should not include relationship.");
 assert.match(script, /function selectGenerationCell\(characterId, condition, timePoint\)/, "Progress cells should be selectable.");
 assert.match(html + script, /圖片功能預留/, "The image region should explain its reserved state.");
@@ -32,6 +31,10 @@ assert.match(css, /:focus-visible/, "Keyboard focus should be visible.");
 assert.match(css, /@media\s*\(max-width:\s*900px\)/, "Tablet layout should be responsive.");
 assert.match(css, /@media\s*\(max-width:\s*640px\)/, "Mobile layout should be responsive.");
 assert.match(css, /\.image-placeholder\[data-state=["']reserved["']\]/, "Reserved image state should be styled.");
+assert.doesNotMatch(html, /01 \/ Participant|建立或選擇參與者|重新選擇提示|下一步：設定他者|至少 2 位，最多 3 位|新增第三位他者|下一步：開始生成|一次生成一個組合/, "Removed helper copy and controls should stay removed.");
+assert.match(html, /id="need-back"[^>]*aria-label="返回"/, "Need view should use an accessible back arrow.");
+assert.match(script, /characters:\s*\[createCharacter\(1\), createCharacter\(2\), createCharacter\(3\)\]/, "Participants should start with exactly three roles.");
+assert.doesNotMatch(html, /class="remove-character"/, "Fixed roles should not expose remove controls.");
 
 assert.match(html, /id="participant-select"/, "UI should let researchers switch participants.");
 assert.match(html, /id="add-participant"/, "UI should let researchers add another participant.");
@@ -54,6 +57,5 @@ assert.match(html + script, /真實/, "The experimental condition should be labe
 assert.match(html + script, /反事實/, "The experimental condition should be labeled 反事實.");
 assert.doesNotMatch(html + script, /請先完成目前條件/, "The UI should not show extra instructional hint text.");
 
-assert.match(html + script, /自動寫入 Notion/, "The UI should clarify that API mode writes to Notion automatically.");
 assert.doesNotMatch(html + script, /核可|退回|重生|審閱/, "The experiment UI should not imply subjective review/regeneration.");
 assert.match(html, /<span class="stamp">V3<\/span>/, "The UI version stamp should match the current prompt version.");
