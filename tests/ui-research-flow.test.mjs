@@ -38,6 +38,9 @@ assert.doesNotMatch(html, /class="remove-character"/, "Fixed roles should not ex
 assert.match(html, /class="workspace-sidebar"/, "Workspace should use one sidebar.");
 assert.match(html, /id="sidebar-need"/, "Sidebar should allow returning to need selection.");
 assert.doesNotMatch(html, /class="workspace-tabs"/, "The old top pill navigation should be removed.");
+assert.match(html, /<small>01<\/small> 事件/, "Sidebar should number the event step.");
+assert.match(html, /<small>02<\/small> 他者/, "Sidebar should number the others step.");
+assert.match(html, /<small>03<\/small> 生成/, "Sidebar should number the generate step.");
 
 assert.match(html, /id="participant-select"/, "UI should let researchers switch participants.");
 assert.match(html, /id="add-participant"/, "UI should let researchers add another participant.");
@@ -54,8 +57,8 @@ assert.doesNotMatch(html + script, /聽完|聽到這段|第一個反應/, "Mock 
 assert.doesNotMatch(html + script, /這件事對我來說|旁人的故事/, "Mock output should not use abstract template phrasing.");
 assert.match(script, /pickVariant/, "Mock output should vary wording instead of using one fixed public template.");
 assert.match(script, /我看到|我記得|我注意到/, "Mock output should start from natural observation language.");
-assert.doesNotMatch(html + script, /現在/, "Research-facing time labels should use 當下 instead of 現在.");
 assert.match(html + script, /當下/, "The present-time condition should be labeled 當下.");
+assert.match(script, /condition === "real" \? "現在" : "當下"/, "Present label should depend on the selected condition.");
 assert.match(html + script, /真實/, "The experimental condition should be labeled 真實.");
 assert.match(html + script, /反事實/, "The experimental condition should be labeled 反事實.");
 assert.doesNotMatch(html + script, /請先完成目前條件/, "The UI should not show extra instructional hint text.");

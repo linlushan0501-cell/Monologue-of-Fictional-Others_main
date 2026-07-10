@@ -122,7 +122,7 @@ function getSelectedCharacter() { const participant = getActiveParticipant(); re
 function getScenarioDescription(condition) { const participant = getActiveParticipant(); return condition === "real" ? participant.realEventDescription : participant.counterfactualDescription; }
 function getTimePointValue(condition, timePoint) {
   const p = getActiveParticipant();
-  if (timePoint === "present") return "當下";
+  if (timePoint === "present") return condition === "real" ? "現在" : "當下";
   if (condition === "real") return timePoint === "past" ? p.realPastTimePoint : p.realFutureTimePoint;
   return timePoint === "past" ? p.counterfactualPastTimePoint : p.counterfactualFutureTimePoint;
 }
@@ -220,6 +220,7 @@ function renderGenerationControls() {
   select.innerHTML = participant.characters.map((character) => `<option value="${character.id}">${character.name || "未命名角色"}</option>`).join(""); select.value = state.selectedCharacterId;
   document.querySelectorAll("[data-condition]").forEach((button) => button.classList.toggle("active", button.dataset.condition === state.selectedCondition));
   document.querySelectorAll("[data-time]").forEach((button) => button.classList.toggle("active", button.dataset.time === state.selectedTimePoint));
+  document.querySelector('[data-time="present"]').textContent = state.selectedCondition === "real" ? "現在" : "當下";
   const message = validationMessage(); byId("generation-validation").textContent = message; byId("generate-button").disabled = Boolean(message) || state.isGenerating;
 }
 function renderPostcard() {
@@ -233,7 +234,7 @@ function renderPostcard() {
 }
 function renderMatrix() {
   const participant = getActiveParticipant();
-  byId("progress-matrix").innerHTML = participant.characters.map((character) => `<div class="matrix-row"><div class="matrix-role">${character.name || "未命名角色"}</div>${conditions.flatMap((condition) => timePoints.map((timePoint) => { const found = state.generations.find((generation) => generation.participantId === participant.id && generation.characterId === character.id && generation.condition === condition && generation.timePointType === timePoint); return `<button class="matrix-cell ${found ? "generated" : "missing"}" type="button" data-character-id="${character.id}" data-condition="${condition}" data-time-point="${timePoint}" aria-pressed="${state.selectedCharacterId === character.id && state.selectedCondition === condition && state.selectedTimePoint === timePoint}"><small>${labels[condition]}</small>${labels[timePoint]}</button>`; })).join("")}</div>`).join("");
+  byId("progress-matrix").innerHTML = participant.characters.map((character) => `<div class="matrix-row"><div class="matrix-role">${character.name || "未命名角色"}</div>${conditions.flatMap((condition) => timePoints.map((timePoint) => { const found = state.generations.find((generation) => generation.participantId === participant.id && generation.characterId === character.id && generation.condition === condition && generation.timePointType === timePoint); const timeLabel = timePoint === "present" ? (condition === "real" ? "現在" : "當下") : labels[timePoint]; return `<button class="matrix-cell ${found ? "generated" : "missing"}" type="button" data-character-id="${character.id}" data-condition="${condition}" data-time-point="${timePoint}" aria-pressed="${state.selectedCharacterId === character.id && state.selectedCondition === condition && state.selectedTimePoint === timePoint}"><small>${labels[condition]}</small>${timeLabel}</button>`; })).join("")}</div>`).join("");
   document.querySelectorAll(".matrix-cell").forEach((button) => button.addEventListener("click", () => selectGenerationCell(button.dataset.characterId, button.dataset.condition, button.dataset.timePoint)));
 }
 function renderRecords() {
