@@ -9,3 +9,4 @@ body{letter-spacing:-.01em}.onboarding-view{position:relative;width:min(640px,ca
 .workspace-sidebar{padding-top:0}.wordmark,.wordmark span{font-size:24px;line-height:1.25}
 .matrix-cell.generated{background:#f3f3f3;color:var(--ink);border-color:#cfcfcf;box-shadow:inset 3px 0 0 #8a8a8a}.matrix-cell.generated small{color:#666}
 body{background:radial-gradient(circle at 8% 12%,rgba(216,222,228,.2),transparent 28%),#fff;background-attachment:fixed}.sidebar-nav button.active,.segmented button.active{border-color:transparent;background:rgba(238,240,242,.52);color:var(--ink);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:none}
+.segmented button.active{background:rgba(214,218,222,.76);font-weight:650}
