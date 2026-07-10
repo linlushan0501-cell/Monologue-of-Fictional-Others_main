@@ -297,7 +297,7 @@ export default async function handler(request, response) {
         id: body.id,
         participantId: body.participantId,
         participantCode: record.participant_id,
-        characterId: body.characterId,
+        characterId: body.character_id,
         characterName: record.character,
         relationship: record.relationship,
         selectionReason: record.selection_reason,
