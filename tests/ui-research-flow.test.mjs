@@ -52,6 +52,9 @@ assert.match(compactCss, /\.workspace-sidebar\{background:transparent;border:0;b
 assert.match(compactCss, /#participant-view \.participant-form\{width:min\(520px,100%\)\}/, "Participant fields should use a balanced compact width.");
 assert.match(compactCss, /\.button-primary,\.segmented button\.active[^}]*radial-gradient/, "Black controls should use a subtle reflective highlight.");
 assert.match(compactCss, /\.matrix-cell\.generated\{background:#f3f3f3;color:var\(--ink\)/, "Generated records should use a light state.");
+assert.doesNotMatch(compactCss, /\.matrix-cell\.generated\{[^}]*box-shadow:inset 3px/, "Generated cells should not use a heavy inset shadow.");
+assert.doesNotMatch(html + script, /record-list|record-card/, "The duplicate full record detail should be removed.");
+assert.match(script, /generation\.needLabelSnapshot.*labels\[generation\.condition\].*resultTimeLabel/s, "The result badge should show event type, condition, and time.");
 assert.match(compactCss, /#participant-view \.onboarding-header,#need-view \.onboarding-header\{margin-top:auto\}/, "Onboarding content should be vertically centered.");
 
 assert.match(html, /id="participant-select"/, "UI should let researchers switch participants.");

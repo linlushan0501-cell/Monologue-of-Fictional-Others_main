@@ -227,7 +227,8 @@ function renderPostcard() {
   const generation = getCurrentGeneration(); const character = getSelectedCharacter(); const body = byId("postcard-body");
   body.classList.toggle("skeleton", state.isGenerating);
   if (state.isGenerating) { byId("result-source").textContent = "生成中"; byId("postcard-title").textContent = character?.name || "他者"; body.textContent = "正在生成獨白內容，請稍候片刻。"; return; }
-  byId("result-source").textContent = generation ? (generation.source === "api" ? (generation.notionUrl ? "已寫入 Notion" : "正式生成") : "離線示意") : "尚未生成";
+  const resultTimeLabel = generation?.timePointType === "present" ? (generation.condition === "real" ? "現在" : "當下") : labels[generation?.timePointType];
+  byId("result-source").textContent = generation ? `${generation.needLabelSnapshot || "未分類"} / ${labels[generation.condition]} / ${resultTimeLabel}` : "尚未生成";
   byId("postcard-title").textContent = generation?.characterName || character?.name || "選擇一位他者";
   body.textContent = generation?.generatedContent || "完成左側條件後，生成的獨白會顯示在這裡。";
 }
@@ -236,12 +237,7 @@ function renderMatrix() {
   byId("progress-matrix").innerHTML = participant.characters.map((character) => `<div class="matrix-row"><div class="matrix-role">${character.name || "未命名角色"}</div>${conditions.flatMap((condition) => timePoints.map((timePoint) => { const found = state.generations.find((generation) => generation.participantId === participant.id && generation.characterId === character.id && generation.condition === condition && generation.timePointType === timePoint); const timeLabel = timePoint === "present" ? (condition === "real" ? "現在" : "當下") : labels[timePoint]; return `<button class="matrix-cell ${found ? "generated" : "missing"}" type="button" data-character-id="${character.id}" data-condition="${condition}" data-time-point="${timePoint}" aria-pressed="${state.selectedCharacterId === character.id && state.selectedCondition === condition && state.selectedTimePoint === timePoint}"><small>${labels[condition]}</small>${timeLabel}</button>`; })).join("")}</div>`).join("");
   document.querySelectorAll(".matrix-cell").forEach((button) => button.addEventListener("click", () => selectGenerationCell(button.dataset.characterId, button.dataset.condition, button.dataset.timePoint)));
 }
-function renderRecords() {
-  const generation = getCurrentGeneration();
-  const recordTimeLabel = generation?.timePointType === "present" ? (generation.condition === "real" ? "現在" : "當下") : labels[generation?.timePointType];
-  byId("record-list").innerHTML = generation ? `<article class="record-card"><p class="record-meta">${generation.needLabelSnapshot || "未分類"} / ${labels[generation.condition]} / ${recordTimeLabel}</p><h4>${generation.characterName}</h4><p>${generation.generatedContent}</p></article>` : "";
-}
-function renderGeneratedViews() { renderPostcard(); renderMatrix(); renderRecords(); }
+function renderGeneratedViews() { renderPostcard(); renderMatrix(); }
 function render() { renderViewVisibility(); renderParticipantSelect(); renderNeedSelection(); renderNavigation(); renderForms(); renderCharacters(); renderGenerationControls(); renderGeneratedViews(); }
 
 function bindStaticEvents() {
