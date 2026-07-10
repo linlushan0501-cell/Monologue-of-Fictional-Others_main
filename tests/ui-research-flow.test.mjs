@@ -46,7 +46,7 @@ assert.match(compactCss, /data:image\/svg\+xml/, "Selects should use one explici
 assert.match(compactCss, /right 20px center/, "Select arrows should align with the date icon.");
 assert.match(compactCss, /background-size:10px 6px/, "Select arrows should remain visually compact.");
 assert.doesNotMatch(html + script, /notion-link|查看 Notion 紀錄/, "The result card should not expose a Notion link.");
-assert.match(compactCss, /backdrop-filter:blur/, "Sidebar and segmented controls should use restrained glass blur.");
+assert.match(compactCss, /\.sidebar-nav button\.active,\.segmented button\.active[^}]*backdrop-filter:blur\(10px\)/, "Only active navigation and segmented options should use glass blur.");
 assert.match(compactCss, /\.matrix-cell\.generated\{background:#f3f3f3;color:var\(--ink\)/, "Generated records should use a light state.");
 assert.match(compactCss, /#participant-view \.onboarding-header,#need-view \.onboarding-header\{margin-top:auto\}/, "Onboarding content should be vertically centered.");
 
