@@ -14,6 +14,10 @@ function trimText(value, maxLength = 1900) {
   return text.length > maxLength ? `${text.slice(0, maxLength - 1)}...` : text;
 }
 
+function limitGeneratedText(value, maxLength = 220) {
+  return String(value || "").trim().slice(0, maxLength);
+}
+
 function notionRichText(value) {
   return [{ type: "text", text: { content: trimText(value) || "-" } }];
 }
@@ -107,7 +111,7 @@ function buildPrompt(record) {
     `本次應採用的事件情境：${selectedScenario}`,
     `另一個情境僅供區分，不可混用：${contrastScenario || "-"}`,
     "",
-    "輸出限制：只輸出獨白正文，約 160 到 240 字。不要加標題、括號註解、欄位名稱或條列。",
+    "輸出限制：只輸出獨白正文，最多 220 字。不要加標題、括號註解、欄位名稱或條列。",
   ].join("\n");
 }
 
@@ -285,7 +289,7 @@ export default async function handler(request, response) {
       return;
     }
 
-    const generatedText = await createOpenAiText(record);
+    const generatedText = limitGeneratedText(await createOpenAiText(record));
     const completedRecord = {
       ...record,
       generated_text: generatedText,
