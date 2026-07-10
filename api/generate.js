@@ -208,6 +208,7 @@ async function createNotionTableRow(record, notionKey, databaseId) {
   const timeCategoryLabel = getTimePointLabel(record.time_point_type);
   const properties = {
     participant_id: { title: notionTitle(record.participant_id) },
+    event_type: { select: { name: record.need_label_snapshot } },
     condition: { select: { name: conditionLabel } },
     time_point_type: { select: { name: timeCategoryLabel } },
     time_point_label: { rich_text: notionRichText(record.time_point_label) },

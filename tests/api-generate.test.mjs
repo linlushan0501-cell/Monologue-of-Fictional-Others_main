@@ -13,6 +13,7 @@ assert.match(api, /need_question_snapshot:\s*trimText\(body\.need_question_snaps
 assert.match(api, /needQuestionSnapshot:\s*record\.need_question_snapshot/, "API response should return the need snapshot.");
 assert.doesNotMatch(api, /`角色關係：\$\{record\.relationship/, "Prompt should not use relationship.");
 assert.match(api, /imageStatus:\s*["']reserved["']/, "API response should reserve future image state.");
+assert.match(api, /event_type:\s*\{\s*select:\s*\{\s*name:\s*record\.need_label_snapshot/, "Notion rows should store the selected event type.");
 
 assert.match(api, /process\.env\.OPENAI_API_KEY/, "The API function should read the OpenAI key on the server.");
 assert.match(api, /process\.env\.NOTION_API_KEY/, "The API function should read the Notion key on the server.");

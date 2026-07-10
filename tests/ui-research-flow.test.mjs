@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const script = readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const css = readFileSync(new URL("../style.css", import.meta.url), "utf8");
+const compactCss = readFileSync(new URL("../compact.css", import.meta.url), "utf8");
 
 assert.match(script, /const needPrompts = \[/, "The UI should define five stable need prompts.");
 for (const id of ["physiological", "safety", "belonging", "esteem", "self-actualization"]) {
@@ -41,6 +42,8 @@ assert.doesNotMatch(html, /class="workspace-tabs"/, "The old top pill navigation
 assert.match(html, /<small>01<\/small> 事件/, "Sidebar should number the event step.");
 assert.match(html, /<small>02<\/small> 他者/, "Sidebar should number the others step.");
 assert.match(html, /<small>03<\/small> 生成/, "Sidebar should number the generate step.");
+assert.match(compactCss, /calc\(100% - 40px\)/, "Select arrows should be inset from the edge.");
+assert.match(compactCss, /#participant-view \.onboarding-header,#need-view \.onboarding-header\{margin-top:auto\}/, "Onboarding content should be vertically centered.");
 
 assert.match(html, /id="participant-select"/, "UI should let researchers switch participants.");
 assert.match(html, /id="add-participant"/, "UI should let researchers add another participant.");
