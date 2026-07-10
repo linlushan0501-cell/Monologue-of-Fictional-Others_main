@@ -31,10 +31,13 @@ assert.match(css, /:focus-visible/, "Keyboard focus should be visible.");
 assert.match(css, /@media\s*\(max-width:\s*900px\)/, "Tablet layout should be responsive.");
 assert.match(css, /@media\s*\(max-width:\s*640px\)/, "Mobile layout should be responsive.");
 assert.match(css, /\.image-placeholder\[data-state=["']reserved["']\]/, "Reserved image state should be styled.");
-assert.doesNotMatch(html, /01 \/ Participant|建立或選擇參與者|重新選擇提示|下一步：設定他者|至少 2 位，最多 3 位|新增第三位他者|下一步：開始生成|一次生成一個組合/, "Removed helper copy and controls should stay removed.");
+assert.doesNotMatch(html, /01 \/ Participant|建立或選擇參與者|下一步：設定他者|至少 2 位，最多 3 位|新增第三位他者|下一步：開始生成|一次生成一個組合/, "Removed helper copy and controls should stay removed.");
 assert.match(html, /id="need-back"[^>]*aria-label="返回"/, "Need view should use an accessible back arrow.");
 assert.match(script, /characters:\s*\[createCharacter\(1\), createCharacter\(2\), createCharacter\(3\)\]/, "Participants should start with exactly three roles.");
 assert.doesNotMatch(html, /class="remove-character"/, "Fixed roles should not expose remove controls.");
+assert.match(html, /class="workspace-sidebar"/, "Workspace should use one sidebar.");
+assert.match(html, /id="sidebar-need"/, "Sidebar should allow returning to need selection.");
+assert.doesNotMatch(html, /class="workspace-tabs"/, "The old top pill navigation should be removed.");
 
 assert.match(html, /id="participant-select"/, "UI should let researchers switch participants.");
 assert.match(html, /id="add-participant"/, "UI should let researchers add another participant.");

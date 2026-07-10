@@ -39,14 +39,18 @@
       </section>
 
       <section class="workspace" id="workspace-view" hidden>
-        <header class="workspace-header">
-          <button class="wordmark" id="return-to-participant" type="button">Monologue of<br />Fictional Others</button>
-          <nav class="workspace-tabs" aria-label="研究流程">
+        <aside class="workspace-sidebar">
+          <button class="wordmark" id="return-to-participant" type="button">Monologue<br /><span>of Fictional Others</span></button>
+          <nav class="sidebar-nav" aria-label="研究流程">
             <button data-step="event" type="button">事件</button>
             <button data-step="characters" type="button">他者</button>
             <button data-step="generate" type="button">生成</button>
           </nav>
-        </header>
+          <div class="sidebar-secondary">
+            <button id="sidebar-need" type="button">← 重新選擇提示</button>
+            <button id="sidebar-participant" type="button">← 返回參與者</button>
+          </div>
+        </aside>
 
         <section class="step-section" data-section="event">
           <div class="section-heading">

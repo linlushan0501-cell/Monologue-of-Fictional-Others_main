@@ -250,6 +250,8 @@ function bindStaticEvents() {
   byId("delete-participant").addEventListener("click", () => { if (state.participants.length <= 1 || !window.confirm("確定刪除這位參與者與其生成紀錄？")) return; const id = state.activeParticipantId; state.participants = state.participants.filter((participant) => participant.id !== id); state.generations = state.generations.filter((generation) => generation.participantId !== id); state.activeParticipantId = state.participants[0].id; state.selectedCharacterId = state.participants[0].characters[0].id; saveState(); render(); });
   byId("participant-next").addEventListener("click", () => setView("need")); byId("need-back").addEventListener("click", () => setView("participant")); byId("need-next").addEventListener("click", () => setStep("event"));
   byId("return-to-participant").addEventListener("click", () => setView("participant"));
+  byId("sidebar-participant").addEventListener("click", () => setView("participant"));
+  byId("sidebar-need").addEventListener("click", () => setView("need"));
   document.querySelectorAll("[data-step]").forEach((button) => button.addEventListener("click", () => setStep(button.dataset.step)));
   document.querySelectorAll("[data-go-step]").forEach((button) => button.addEventListener("click", () => setStep(button.dataset.goStep)));
   const fields = { "real-event": "realEventDescription", "counterfactual-event": "counterfactualDescription", "real-past-time": "realPastTimePoint", "real-future-time": "realFutureTimePoint", "counterfactual-past-time": "counterfactualPastTimePoint", "counterfactual-future-time": "counterfactualFutureTimePoint" };

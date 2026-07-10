@@ -283,3 +283,11 @@ The annotated Frame 1–5 screenshots supersede earlier spacing and role-count d
 - Page 4 always contains exactly three roles. Remove the role-count note, add-role button, remove-role controls, and section Next button.
 - Page 5 removes the Notion helper note and tightens the space above the generation-record heading and matrix.
 - OpenAI generation, Notion persistence, image reservation, generation snapshots, and API fields remain unchanged.
+
+### Lightweight sidebar revision
+
+- Pages 1–2 use a centered narrow column with smaller, consistent headings and relaxed English letter spacing.
+- Pages 3–5 replace the top pill navigation and oversized wordmark with one fixed 220px left sidebar.
+- The sidebar contains the compact brand, Event, Others, Generate, Return to participant, and Reselect prompt actions.
+- Main content uses white surfaces, fine neutral borders, smaller radii, limited grey fills, and compact controls.
+- On mobile, the sidebar becomes a compact top navigation.
