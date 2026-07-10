@@ -43,7 +43,8 @@ assert.match(html, /<small>01<\/small> 事件/, "Sidebar should number the event
 assert.match(html, /<small>02<\/small> 他者/, "Sidebar should number the others step.");
 assert.match(html, /<small>03<\/small> 生成/, "Sidebar should number the generate step.");
 assert.match(compactCss, /data:image\/svg\+xml/, "Selects should use one explicit SVG arrow.");
-assert.match(compactCss, /right 36px center/, "Select arrows should be inset from the edge.");
+assert.match(compactCss, /right 20px center/, "Select arrows should align with the date icon.");
+assert.match(compactCss, /background-size:10px 6px/, "Select arrows should remain visually compact.");
 assert.match(compactCss, /#participant-view \.onboarding-header,#need-view \.onboarding-header\{margin-top:auto\}/, "Onboarding content should be vertically centered.");
 
 assert.match(html, /id="participant-select"/, "UI should let researchers switch participants.");
