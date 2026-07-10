@@ -230,7 +230,6 @@ function renderPostcard() {
   byId("result-source").textContent = generation ? (generation.source === "api" ? (generation.notionUrl ? "已寫入 Notion" : "正式生成") : "離線示意") : "尚未生成";
   byId("postcard-title").textContent = generation?.characterName || character?.name || "選擇一位他者";
   body.textContent = generation?.generatedContent || "完成左側條件後，生成的獨白會顯示在這裡。";
-  const link = byId("notion-link"); link.hidden = !generation?.notionUrl; if (generation?.notionUrl) link.href = generation.notionUrl;
 }
 function renderMatrix() {
   const participant = getActiveParticipant();
@@ -238,7 +237,9 @@ function renderMatrix() {
   document.querySelectorAll(".matrix-cell").forEach((button) => button.addEventListener("click", () => selectGenerationCell(button.dataset.characterId, button.dataset.condition, button.dataset.timePoint)));
 }
 function renderRecords() {
-  const generation = getCurrentGeneration(); byId("record-list").innerHTML = generation ? `<article class="record-card"><p class="record-meta">${generation.needLabelSnapshot || "未分類"} / ${labels[generation.condition]} / ${labels[generation.timePointType]}</p><h4>${generation.characterName}</h4><p>${generation.generatedContent}</p></article>` : "";
+  const generation = getCurrentGeneration();
+  const recordTimeLabel = generation?.timePointType === "present" ? (generation.condition === "real" ? "現在" : "當下") : labels[generation?.timePointType];
+  byId("record-list").innerHTML = generation ? `<article class="record-card"><p class="record-meta">${generation.needLabelSnapshot || "未分類"} / ${labels[generation.condition]} / ${recordTimeLabel}</p><h4>${generation.characterName}</h4><p>${generation.generatedContent}</p></article>` : "";
 }
 function renderGeneratedViews() { renderPostcard(); renderMatrix(); renderRecords(); }
 function render() { renderViewVisibility(); renderParticipantSelect(); renderNeedSelection(); renderNavigation(); renderForms(); renderCharacters(); renderGenerationControls(); renderGeneratedViews(); }

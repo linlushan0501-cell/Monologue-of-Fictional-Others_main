@@ -31,10 +31,10 @@ function getConditionLabel(condition) {
   return condition === "counterfactual" ? "反事實" : "真實";
 }
 
-function getTimePointLabel(timePointType) {
+function getTimePointLabel(timePointType, condition) {
+  if (timePointType === "present") return condition === "real" ? "現在" : "當下";
   const labels = {
     past: "過去",
-    present: "當下",
     future: "未來",
   };
   return labels[timePointType] || timePointType;
@@ -205,7 +205,7 @@ async function createNotionPage(record) {
 
 async function createNotionTableRow(record, notionKey, databaseId) {
   const conditionLabel = getConditionLabel(record.condition);
-  const timeCategoryLabel = getTimePointLabel(record.time_point_type);
+  const timeCategoryLabel = getTimePointLabel(record.time_point_type, record.condition);
   const properties = {
     participant_id: { title: notionTitle(record.participant_id) },
     event_type: { select: { name: record.need_label_snapshot } },

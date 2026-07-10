@@ -15,6 +15,7 @@ assert.doesNotMatch(api, /`角色關係：\$\{record\.relationship/, "Prompt sho
 assert.match(api, /imageStatus:\s*["']reserved["']/, "API response should reserve future image state.");
 assert.match(api, /event_type:\s*\{\s*select:\s*\{\s*name:\s*record\.need_label_snapshot/, "Notion rows should store the selected event type.");
 assert.match(api, /characterId:\s*body\.character_id/, "API response should preserve the character id sent by the browser.");
+assert.match(api, /if \(timePointType === "present"\) return condition === "real" \? "現在" : "當下"/, "Notion time select should distinguish real and counterfactual present.");
 
 assert.match(api, /process\.env\.OPENAI_API_KEY/, "The API function should read the OpenAI key on the server.");
 assert.match(api, /process\.env\.NOTION_API_KEY/, "The API function should read the Notion key on the server.");
