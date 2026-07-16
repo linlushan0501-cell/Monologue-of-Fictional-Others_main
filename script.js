@@ -13,6 +13,7 @@ const needPrompts = [
 const conditions = ["real", "counterfactual"];
 const timePoints = ["past", "present", "future"];
 const storageKey = "research-monologue-dashboard-static-v1";
+const deviceIdKey = `${storageKey}-device-id`;
 const promptVersion = "openai-notion-v3";
 const promptVersionReason = "v3: 避免複述輸入敘事；以角色脈絡生成獨白。";
 const promptVersionReasonKey = `${storageKey}-${promptVersion}-reason`;
@@ -54,6 +55,15 @@ const defaultState = {
 let state = loadState();
 
 function cloneDefaultState() { return structuredClone(defaultState); }
+function getDeviceId() {
+  const cookieValue = document.cookie.split("; ").find((item) => item.startsWith(`${deviceIdKey}=`))?.split("=")[1] || "";
+  let deviceId = localStorage.getItem(deviceIdKey) || decodeURIComponent(cookieValue);
+  if (!deviceId) deviceId = crypto.randomUUID();
+  localStorage.setItem(deviceIdKey, deviceId);
+  document.cookie = `${deviceIdKey}=${encodeURIComponent(deviceId)}; Max-Age=31536000; Path=/; SameSite=Lax; Secure`;
+  return deviceId;
+}
+const deviceId = getDeviceId();
 function normalizeParticipant(participant = {}, index = 1) {
   const next = { ...createParticipant(index), ...participant };
   const legacyPast = participant.pastTimePoint || "";
@@ -82,6 +92,39 @@ function loadState() {
   } catch { return cloneDefaultState(); }
 }
 function saveState() { localStorage.setItem(storageKey, JSON.stringify({ ...state, isGenerating: false })); }
+async function saveProgressToCloud() {
+  const participant = getActiveParticipant();
+  try {
+    await fetch("/api/progress", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        device_id: deviceId,
+        participant_id: participant?.code || "Device progress",
+        state: { ...state, isGenerating: false },
+      }),
+    });
+  } catch {
+    // localStorage remains the fallback when Notion is temporarily unavailable.
+  }
+}
+async function loadProgressFromCloud() {
+  try {
+    const response = await fetch(`/api/progress?device_id=${encodeURIComponent(deviceId)}`);
+    const payload = await response.json();
+    if (!response.ok || !payload.state?.participants?.length) return;
+    const parsed = payload.state;
+    const participants = parsed.participants.map(normalizeParticipant);
+    state = { ...cloneDefaultState(), ...parsed, participants, generations: parsed.generations || [], isGenerating: false };
+    if (!participants.some((participant) => participant.id === state.activeParticipantId)) state.activeParticipantId = participants[0].id;
+    const active = getActiveParticipant();
+    if (!active.characters.some((character) => character.id === state.selectedCharacterId)) state.selectedCharacterId = active.characters[0].id;
+    saveState();
+    render();
+  } catch {
+    // Keep the already-loaded local state.
+  }
+}
 function byId(id) { return document.getElementById(id); }
 function getActiveParticipantFromState(sourceState) { return sourceState.participants.find((participant) => participant.id === sourceState.activeParticipantId) || sourceState.participants[0]; }
 function getActiveParticipant() { return getActiveParticipantFromState(state); }
@@ -246,7 +289,7 @@ function bindStaticEvents() {
   byId("interview-date").addEventListener("input", (event) => updateParticipant("interviewDate", event.target.value));
   byId("add-participant").addEventListener("click", () => { const participant = createParticipant(state.participants.length + 1); state.participants.push(participant); state.activeParticipantId = participant.id; state.selectedCharacterId = participant.characters[0].id; saveState(); render(); });
   byId("delete-participant").addEventListener("click", () => { if (state.participants.length <= 1 || !window.confirm("確定刪除這位參與者與其生成紀錄？")) return; const id = state.activeParticipantId; state.participants = state.participants.filter((participant) => participant.id !== id); state.generations = state.generations.filter((generation) => generation.participantId !== id); state.activeParticipantId = state.participants[0].id; state.selectedCharacterId = state.participants[0].characters[0].id; saveState(); render(); });
-  byId("participant-next").addEventListener("click", () => setView("need")); byId("need-back").addEventListener("click", () => setView("participant")); byId("need-next").addEventListener("click", () => setStep("event"));
+  byId("participant-next").addEventListener("click", () => { setView("need"); saveProgressToCloud(); }); byId("need-back").addEventListener("click", () => setView("participant")); byId("need-next").addEventListener("click", () => { setStep("event"); saveProgressToCloud(); });
   byId("return-to-participant").addEventListener("click", () => setView("participant"));
   byId("sidebar-participant").addEventListener("click", () => setView("participant"));
   byId("sidebar-need").addEventListener("click", () => setView("need"));
@@ -260,7 +303,7 @@ function bindStaticEvents() {
   byId("generate-button").addEventListener("click", async () => {
     if (!hasRequiredGenerationData() || state.isGenerating) return; state.isGenerating = true; state.generationError = ""; renderGenerationControls(); renderPostcard();
     try { upsertGeneration(await createApiGeneration()); } catch (error) { state.generationError = error.message; upsertGeneration(createMockGeneration()); }
-    state.isGenerating = false; saveState(); render();
+    state.isGenerating = false; saveState(); saveProgressToCloud(); render();
   });
 }
-bindStaticEvents(); render();
+bindStaticEvents(); render(); loadProgressFromCloud();
