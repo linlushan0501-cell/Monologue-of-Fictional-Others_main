@@ -26,3 +26,11 @@ assert.match(script, /fetch\("\/api\/progress"/, "The browser should save progre
 assert.match(script, /participant-next.*saveProgressToCloud/s, "Participant Next should save progress.");
 assert.match(script, /need-next.*saveProgressToCloud/s, "Need Next should save progress.");
 assert.match(script, /upsertGeneration.*saveProgressToCloud/s, "Completed generations should save progress.");
+assert.match(script, /const progressSaveDelay = 3000/, "Cloud autosave should wait three seconds after the latest change.");
+assert.match(script, /function scheduleProgressSave\(\)/, "State changes should share one debounced cloud-save scheduler.");
+assert.match(script, /clearTimeout\(progressSaveTimer\)/, "Repeated edits should replace the pending save.");
+assert.match(script, /progressSaveTimer = setTimeout\(saveProgressToCloud, progressSaveDelay\)/, "The latest state should be saved after the debounce.");
+assert.match(script, /function updateActiveParticipant[\s\S]*scheduleProgressSave\(\)/, "Participant field edits should trigger autosave.");
+assert.match(script, /function selectNeed[\s\S]*scheduleProgressSave\(\)/, "Need selection should trigger autosave.");
+assert.match(script, /function setStep[\s\S]*scheduleProgressSave\(\)/, "Workspace navigation should trigger autosave.");
+assert.match(script, /visibilitychange/, "Leaving the visible page should attempt a final cloud save.");

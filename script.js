@@ -64,6 +64,12 @@ function getDeviceId() {
   return deviceId;
 }
 const deviceId = getDeviceId();
+const progressSaveDelay = 3000;
+let progressSaveTimer;
+function scheduleProgressSave() {
+  clearTimeout(progressSaveTimer);
+  progressSaveTimer = setTimeout(saveProgressToCloud, progressSaveDelay);
+}
 function normalizeParticipant(participant = {}, index = 1) {
   const next = { ...createParticipant(index), ...participant };
   const legacyPast = participant.pastTimePoint || "";
@@ -91,7 +97,10 @@ function loadState() {
     return next;
   } catch { return cloneDefaultState(); }
 }
-function saveState() { localStorage.setItem(storageKey, JSON.stringify({ ...state, isGenerating: false })); }
+function saveState() {
+  localStorage.setItem(storageKey, JSON.stringify({ ...state, isGenerating: false }));
+  scheduleProgressSave();
+}
 async function saveProgressToCloud() {
   const participant = getActiveParticipant();
   try {
@@ -133,14 +142,16 @@ function updateActiveParticipant(patch) {
   const participant = getActiveParticipant();
   state.participants = state.participants.map((item) => item.id === participant.id ? { ...item, ...patch } : item);
   saveState();
+  scheduleProgressSave();
 }
 function updateParticipant(field, value) { updateActiveParticipant({ [field]: value }); renderGeneratedViews(); }
 function setView(viewId) { state.activeView = viewId; saveState(); render(); }
-function setStep(stepId) { state.activeStep = stepId; state.activeView = "workspace"; saveState(); render(); }
+function setStep(stepId) { state.activeStep = stepId; state.activeView = "workspace"; saveState(); scheduleProgressSave(); render(); }
 function selectNeed(needId) {
   const need = needPrompts.find((item) => item.id === needId);
   if (!need) return;
   updateActiveParticipant({ selectedNeedId: need.id, selectedNeedLabel: need.label, selectedNeedQuestion: need.question });
+  scheduleProgressSave();
   renderNeedSelection();
 }
 function setActiveParticipant(participantId) {
@@ -307,3 +318,6 @@ function bindStaticEvents() {
   });
 }
 bindStaticEvents(); render(); loadProgressFromCloud();
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") saveProgressToCloud();
+});
