@@ -8,6 +8,9 @@ const api = readFileSync(apiPath, "utf8");
 const script = readFileSync(new URL("../script.js", import.meta.url), "utf8");
 
 assert.match(api, /NOTION_PROGRESS_DATA_SOURCE_ID/, "Progress should use a separate Notion data source.");
+assert.match(api, /\/v1\/databases\/\$\{configuredId\}/, "A database URL ID should be resolved through the Notion database endpoint.");
+assert.match(api, /database\.data_sources\?\.\[0\]\?\.id/, "The first data source ID should be used for progress queries.");
+assert.match(api, /resolveDataSourceId\(notionKey, configuredId\)/, "The configured ID should be resolved before reading or writing progress.");
 assert.match(api, /data_sources\/.*query/, "Progress loading should query the Notion data source.");
 assert.match(api, /device_id/, "Progress records should be scoped by device ID.");
 assert.match(api, /progress_data/, "Progress records should store serialized browser state.");

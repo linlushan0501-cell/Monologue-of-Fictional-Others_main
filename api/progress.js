@@ -30,6 +30,15 @@ function readProgress(page) {
   return (page?.properties?.progress_data?.rich_text || []).map((item) => item.plain_text || item.text?.content || "").join("");
 }
 
+async function resolveDataSourceId(notionKey, configuredId) {
+  const response = await fetch(`https://api.notion.com/v1/databases/${configuredId}`, {
+    headers: notionHeaders(notionKey),
+  });
+  if (!response.ok) return configuredId;
+  const database = await response.json();
+  return database.data_sources?.[0]?.id || configuredId;
+}
+
 async function queryProgress(notionKey, dataSourceId, deviceId) {
   const response = await fetch(`https://api.notion.com/v1/data_sources/${dataSourceId}/query`, {
     method: "POST",
@@ -74,8 +83,9 @@ export default async function handler(request, response) {
 
   try {
     const notionKey = process.env.NOTION_API_KEY;
-    const dataSourceId = process.env.NOTION_PROGRESS_DATA_SOURCE_ID;
-    if (!notionKey || !dataSourceId) throw new Error("Missing Notion progress configuration.");
+    const configuredId = process.env.NOTION_PROGRESS_DATA_SOURCE_ID;
+    if (!notionKey || !configuredId) throw new Error("Missing Notion progress configuration.");
+    const dataSourceId = await resolveDataSourceId(notionKey, configuredId);
 
     const body = typeof request.body === "string" ? JSON.parse(request.body) : request.body || {};
     const deviceId = String(request.method === "GET" ? request.query?.device_id || "" : body.device_id || "").slice(0, 160);
