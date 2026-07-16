@@ -22,6 +22,22 @@ const labels = { real: "真實", counterfactual: "反事實", past: "過去", pr
 function createCharacter(index) {
   return { id: `character-${Date.now()}-${index}`, name: "", selectionReason: "" };
 }
+function createNeedProgress(needId) {
+  return {
+    needId,
+    realEventDescription: "",
+    counterfactualDescription: "",
+    realPastTimePoint: "",
+    realFutureTimePoint: "",
+    counterfactualPastTimePoint: "",
+    counterfactualFutureTimePoint: "",
+    characters: [createCharacter(1), createCharacter(2), createCharacter(3)],
+    activeStep: "event",
+    selectedCondition: "real",
+    selectedTimePoint: "present",
+    selectedCharacterId: "",
+  };
+}
 function createParticipant(index) {
   return {
     id: `participant-${Date.now()}-${index}`,
@@ -30,13 +46,7 @@ function createParticipant(index) {
     selectedNeedId: "",
     selectedNeedLabel: "",
     selectedNeedQuestion: "",
-    realEventDescription: "",
-    counterfactualDescription: "",
-    realPastTimePoint: "",
-    realFutureTimePoint: "",
-    counterfactualPastTimePoint: "",
-    counterfactualFutureTimePoint: "",
-    characters: [createCharacter(1), createCharacter(2), createCharacter(3)],
+    needProgressById: {},
   };
 }
 const firstParticipant = createParticipant(1);
@@ -46,7 +56,7 @@ const defaultState = {
   activeParticipantId: firstParticipant.id,
   selectedCondition: "real",
   selectedTimePoint: "present",
-  selectedCharacterId: firstParticipant.characters[0].id,
+  selectedCharacterId: "",
   participants: [firstParticipant],
   generations: [],
   isGenerating: false,
@@ -72,16 +82,28 @@ function scheduleProgressSave() {
 }
 function normalizeParticipant(participant = {}, index = 1) {
   const next = { ...createParticipant(index), ...participant };
-  const legacyPast = participant.pastTimePoint || "";
-  const legacyFuture = participant.futureTimePoint || "";
-  next.realPastTimePoint ||= legacyPast;
-  next.realFutureTimePoint ||= legacyFuture;
-  next.counterfactualPastTimePoint ||= legacyPast;
-  next.counterfactualFutureTimePoint ||= legacyFuture;
-  next.characters = (participant.characters?.length ? participant.characters : [createCharacter(1), createCharacter(2), createCharacter(3)])
-    .slice(0, 3)
-    .map((character, characterIndex) => ({ id: character.id || `character-${Date.now()}-${characterIndex}`, name: character.name || "", selectionReason: character.selectionReason || "" }));
-  while (next.characters.length < 3) next.characters.push(createCharacter(next.characters.length + 1));
+  next.needProgressById = { ...(participant.needProgressById || {}) };
+  if (participant.selectedNeedId && !next.needProgressById[participant.selectedNeedId]) {
+    next.needProgressById[participant.selectedNeedId] = {
+      ...createNeedProgress(participant.selectedNeedId),
+      realEventDescription: participant.realEventDescription || "",
+      counterfactualDescription: participant.counterfactualDescription || "",
+      realPastTimePoint: participant.realPastTimePoint || participant.pastTimePoint || "",
+      realFutureTimePoint: participant.realFutureTimePoint || participant.futureTimePoint || "",
+      counterfactualPastTimePoint: participant.counterfactualPastTimePoint || participant.pastTimePoint || "",
+      counterfactualFutureTimePoint: participant.counterfactualFutureTimePoint || participant.futureTimePoint || "",
+      characters: participant.characters || [],
+    };
+  }
+  Object.entries(next.needProgressById).forEach(([needId, progress]) => {
+    const normalized = { ...createNeedProgress(needId), ...progress };
+    normalized.characters = (progress.characters?.length ? progress.characters : [createCharacter(1), createCharacter(2), createCharacter(3)])
+      .slice(0, 3)
+      .map((character, characterIndex) => ({ id: character.id || `character-${Date.now()}-${characterIndex}`, name: character.name || "", selectionReason: character.selectionReason || "" }));
+    while (normalized.characters.length < 3) normalized.characters.push(createCharacter(normalized.characters.length + 1));
+    normalized.selectedCharacterId = normalized.characters.some((character) => character.id === normalized.selectedCharacterId) ? normalized.selectedCharacterId : normalized.characters[0].id;
+    next.needProgressById[needId] = normalized;
+  });
   return next;
 }
 function loadState() {
@@ -93,7 +115,13 @@ function loadState() {
     if (!steps.some((step) => step.id === next.activeStep)) next.activeStep = "event";
     if (!["participant", "need", "workspace"].includes(next.activeView)) next.activeView = "participant";
     const active = getActiveParticipantFromState(next);
-    if (!active.characters.some((character) => character.id === next.selectedCharacterId)) next.selectedCharacterId = active.characters[0].id;
+    const activeProgress = active.needProgressById[active.selectedNeedId];
+    if (activeProgress) {
+      next.activeStep = activeProgress.activeStep;
+      next.selectedCondition = activeProgress.selectedCondition;
+      next.selectedTimePoint = activeProgress.selectedTimePoint;
+      next.selectedCharacterId = activeProgress.selectedCharacterId;
+    }
     return next;
   } catch { return cloneDefaultState(); }
 }
@@ -126,8 +154,7 @@ async function loadProgressFromCloud() {
     const participants = parsed.participants.map(normalizeParticipant);
     state = { ...cloneDefaultState(), ...parsed, participants, generations: parsed.generations || [], isGenerating: false };
     if (!participants.some((participant) => participant.id === state.activeParticipantId)) state.activeParticipantId = participants[0].id;
-    const active = getActiveParticipant();
-    if (!active.characters.some((character) => character.id === state.selectedCharacterId)) state.selectedCharacterId = active.characters[0].id;
+    syncStateFromActiveNeed();
     saveState();
     render();
   } catch {
@@ -137,58 +164,88 @@ async function loadProgressFromCloud() {
 function byId(id) { return document.getElementById(id); }
 function getActiveParticipantFromState(sourceState) { return sourceState.participants.find((participant) => participant.id === sourceState.activeParticipantId) || sourceState.participants[0]; }
 function getActiveParticipant() { return getActiveParticipantFromState(state); }
-function getActiveGenerations() { const participant = getActiveParticipant(); return state.generations.filter((generation) => generation.participantId === participant.id); }
+function getActiveNeedProgress() {
+  const participant = getActiveParticipant();
+  return participant.needProgressById[participant.selectedNeedId] || null;
+}
+function syncStateFromActiveNeed() {
+  const progress = getActiveNeedProgress();
+  if (!progress) { state.selectedCharacterId = ""; return; }
+  state.activeStep = progress.activeStep || "event";
+  state.selectedCondition = progress.selectedCondition || "real";
+  state.selectedTimePoint = progress.selectedTimePoint || "present";
+  state.selectedCharacterId = progress.selectedCharacterId || progress.characters[0]?.id || "";
+}
+function getActiveGenerations() {
+  const participant = getActiveParticipant();
+  return state.generations.filter((generation) => generation.participantId === participant.id && generation.needIdSnapshot === participant.selectedNeedId);
+}
 function updateActiveParticipant(patch) {
   const participant = getActiveParticipant();
   state.participants = state.participants.map((item) => item.id === participant.id ? { ...item, ...patch } : item);
   saveState();
   scheduleProgressSave();
 }
+function updateActiveNeedProgress(patch) {
+  const participant = getActiveParticipant();
+  if (!participant.selectedNeedId) return;
+  const current = getActiveNeedProgress() || createNeedProgress(participant.selectedNeedId);
+  updateActiveParticipant({ needProgressById: { ...participant.needProgressById, [participant.selectedNeedId]: { ...current, ...patch } } });
+}
 function updateParticipant(field, value) { updateActiveParticipant({ [field]: value }); renderGeneratedViews(); }
 function setView(viewId) { state.activeView = viewId; saveState(); render(); }
-function setStep(stepId) { state.activeStep = stepId; state.activeView = "workspace"; saveState(); scheduleProgressSave(); render(); }
+function setStep(stepId) {
+  state.activeStep = stepId; state.activeView = "workspace";
+  updateActiveNeedProgress({ activeStep: stepId });
+  saveState(); scheduleProgressSave(); render();
+}
 function selectNeed(needId) {
   const need = needPrompts.find((item) => item.id === needId);
   if (!need) return;
-  updateActiveParticipant({ selectedNeedId: need.id, selectedNeedLabel: need.label, selectedNeedQuestion: need.question });
+  const participant = getActiveParticipant();
+  const needProgressById = { ...participant.needProgressById };
+  if (!needProgressById[need.id]) needProgressById[need.id] = createNeedProgress(need.id);
+  updateActiveParticipant({ selectedNeedId: need.id, selectedNeedLabel: need.label, selectedNeedQuestion: need.question, needProgressById });
+  syncStateFromActiveNeed();
+  saveState();
   scheduleProgressSave();
-  renderNeedSelection();
+  render();
 }
 function setActiveParticipant(participantId) {
   state.activeParticipantId = participantId;
-  state.selectedCharacterId = getActiveParticipant().characters[0]?.id || "";
+  syncStateFromActiveNeed();
   saveState(); render();
 }
 function updateCharacter(id, field, value) {
-  const participant = getActiveParticipant();
-  updateActiveParticipant({ characters: participant.characters.map((character) => character.id === id ? { ...character, [field]: value } : character) });
+  const progress = getActiveNeedProgress();
+  updateActiveNeedProgress({ characters: progress.characters.map((character) => character.id === id ? { ...character, [field]: value } : character) });
   renderGenerationControls();
 }
 function removeCharacter(characterId) {
-  const participant = getActiveParticipant();
-  if (participant.characters.length <= 2) return;
-  const characters = participant.characters.filter((item) => item.id !== characterId);
-  updateActiveParticipant({ characters });
+  const progress = getActiveNeedProgress();
+  if (progress.characters.length <= 2) return;
+  const characters = progress.characters.filter((item) => item.id !== characterId);
+  updateActiveNeedProgress({ characters });
   if (!characters.some((item) => item.id === state.selectedCharacterId)) state.selectedCharacterId = characters[0].id;
   saveState(); render();
 }
-function getSelectedCharacter() { const participant = getActiveParticipant(); return participant.characters.find((character) => character.id === state.selectedCharacterId) || participant.characters[0]; }
-function getScenarioDescription(condition) { const participant = getActiveParticipant(); return condition === "real" ? participant.realEventDescription : participant.counterfactualDescription; }
+function getSelectedCharacter() { const progress = getActiveNeedProgress(); return progress?.characters.find((character) => character.id === state.selectedCharacterId) || progress?.characters[0]; }
+function getScenarioDescription(condition) { const progress = getActiveNeedProgress(); return condition === "real" ? progress?.realEventDescription || "" : progress?.counterfactualDescription || ""; }
 function getTimePointValue(condition, timePoint) {
-  const p = getActiveParticipant();
+  const p = getActiveNeedProgress();
   if (timePoint === "present") return condition === "real" ? "現在" : "當下";
   if (condition === "real") return timePoint === "past" ? p.realPastTimePoint : p.realFutureTimePoint;
   return timePoint === "past" ? p.counterfactualPastTimePoint : p.counterfactualFutureTimePoint;
 }
-function generationId(participantId, characterId, condition, timePoint) { return `${participantId}-${characterId}-${condition}-${timePoint}`; }
+function generationId(participantId, needId, characterId, condition, timePoint) { return `${participantId}-${needId}-${characterId}-${condition}-${timePoint}`; }
 function getCurrentGeneration() {
   const participant = getActiveParticipant(); const character = getSelectedCharacter();
-  return state.generations.find((generation) => generation.participantId === participant.id && generation.characterId === character?.id && generation.condition === state.selectedCondition && generation.timePointType === state.selectedTimePoint);
+  return state.generations.find((generation) => generation.participantId === participant.id && generation.needIdSnapshot === participant.selectedNeedId && generation.characterId === character?.id && generation.condition === state.selectedCondition && generation.timePointType === state.selectedTimePoint);
 }
 function validationMessage() {
-  const p = getActiveParticipant(); const c = getSelectedCharacter();
-  if (!p.code.trim()) return "請先填寫參與者 ID。";
-  if (!p.selectedNeedId) return "請先選擇生命需求提示。";
+  const participant = getActiveParticipant(); const c = getSelectedCharacter();
+  if (!participant.code.trim()) return "請先填寫參與者 ID。";
+  if (!participant.selectedNeedId) return "請先選擇生命需求提示。";
   if (!getScenarioDescription(state.selectedCondition).trim()) return `請先填寫${labels[state.selectedCondition]}事件。`;
   if (state.selectedTimePoint !== "present" && !getTimePointValue(state.selectedCondition, state.selectedTimePoint).trim()) return `請先填寫${labels[state.selectedTimePoint]}時間點。`;
   if (!c?.name.trim()) return "請先填寫他者名稱。";
@@ -199,11 +256,11 @@ function hashText(value) { return [...value].reduce((sum, character) => sum + ch
 function pickVariant(items, seed, offset = 0) { return items[(hashText(seed) + offset) % items.length]; }
 function createMockGeneration() {
   const participant = getActiveParticipant(); const character = getSelectedCharacter();
-  const seed = generationId(participant.id, character.id, state.selectedCondition, state.selectedTimePoint);
+  const seed = generationId(participant.id, participant.selectedNeedId, character.id, state.selectedCondition, state.selectedTimePoint);
   const openings = ["我看到你把話說到一半又收回去。", "我記得你那天一直避開我的眼神。", "我注意到那個很短的停頓。"];
   const middles = ["我沒有追問，因為我知道再靠近一步，你就會把門關上。", "我想說點什麼，最後只把聲音放輕。", "那份沉默比你說出口的話更重。"];
   return {
-    id: generationId(participant.id, character.id, state.selectedCondition, state.selectedTimePoint), participantId: participant.id, participantCode: participant.code,
+    id: generationId(participant.id, participant.selectedNeedId, character.id, state.selectedCondition, state.selectedTimePoint), participantId: participant.id, participantCode: participant.code,
     characterId: character.id, characterName: character.name || "未命名角色", selectionReason: character.selectionReason,
     condition: state.selectedCondition, timePointType: state.selectedTimePoint, timePointValue: getTimePointValue(state.selectedCondition, state.selectedTimePoint),
     generatedContent: `【${character.name}】${pickVariant(openings, seed)}${pickVariant(middles, seed, 1)}我只是希望，這一次你不用獨自把所有事情撐完。`,
@@ -213,11 +270,12 @@ function createMockGeneration() {
 }
 function createGenerationRequest() {
   const participant = getActiveParticipant(); const character = getSelectedCharacter();
+  const progress = getActiveNeedProgress();
   return {
-    id: generationId(participant.id, character.id, state.selectedCondition, state.selectedTimePoint), participant_id: participant.code,
+    id: generationId(participant.id, participant.selectedNeedId, character.id, state.selectedCondition, state.selectedTimePoint), participant_id: participant.code,
     participantId: participant.id, character_id: character.id, character: character.name, selection_reason: character.selectionReason,
     condition: state.selectedCondition, time_point_type: state.selectedTimePoint, time_point_label: getTimePointValue(state.selectedCondition, state.selectedTimePoint),
-    event_description: getScenarioDescription(state.selectedCondition), real_event_description: participant.realEventDescription, counterfactual_event_description: participant.counterfactualDescription,
+    event_description: getScenarioDescription(state.selectedCondition), real_event_description: progress.realEventDescription, counterfactual_event_description: progress.counterfactualDescription,
     need_id_snapshot: participant.selectedNeedId, need_label_snapshot: participant.selectedNeedLabel, need_question_snapshot: participant.selectedNeedQuestion,
     prompt_version: promptVersion, prompt_version_reason: localStorage.getItem(promptVersionReasonKey) === "recorded" ? "" : promptVersionReason,
   };
@@ -230,7 +288,11 @@ async function createApiGeneration() {
   return { ...payload.generation, source: "api", imageStatus: "reserved" };
 }
 function upsertGeneration(generation) { state.generations = [...state.generations.filter((item) => item.id !== generation.id), generation]; saveState(); }
-function selectGenerationCell(characterId, condition, timePoint) { state.selectedCharacterId = characterId; state.selectedCondition = condition; state.selectedTimePoint = timePoint; saveState(); renderGeneratedViews(); renderGenerationControls(); }
+function selectGenerationCell(characterId, condition, timePoint) {
+  state.selectedCharacterId = characterId; state.selectedCondition = condition; state.selectedTimePoint = timePoint;
+  updateActiveNeedProgress({ selectedCharacterId: characterId, selectedCondition: condition, selectedTimePoint: timePoint });
+  saveState(); renderGeneratedViews(); renderGenerationControls();
+}
 
 function renderViewVisibility() {
   byId("participant-view").hidden = state.activeView !== "participant";
@@ -255,14 +317,15 @@ function renderNavigation() {
   document.querySelectorAll("[data-section]").forEach((section) => { section.hidden = section.dataset.section !== state.activeStep; });
 }
 function renderForms() {
-  const p = getActiveParticipant();
+  const p = getActiveNeedProgress();
   const map = { "real-event": "realEventDescription", "counterfactual-event": "counterfactualDescription", "real-past-time": "realPastTimePoint", "real-future-time": "realFutureTimePoint", "counterfactual-past-time": "counterfactualPastTimePoint", "counterfactual-future-time": "counterfactualFutureTimePoint" };
-  Object.entries(map).forEach(([id, field]) => { byId(id).value = p[field]; });
-  byId("selected-need-context").innerHTML = p.selectedNeedId ? `<strong>${p.selectedNeedLabel}</strong><p>${p.selectedNeedQuestion}</p>` : `<strong>尚未選擇提示</strong><p>返回提示頁選擇一個方向。</p>`;
+  Object.entries(map).forEach(([id, field]) => { byId(id).value = p?.[field] || ""; });
+  const participant = getActiveParticipant();
+  byId("selected-need-context").innerHTML = participant.selectedNeedId ? `<strong>${participant.selectedNeedLabel}</strong><p>${participant.selectedNeedQuestion}</p>` : `<strong>尚未選擇提示</strong><p>返回提示頁選擇一個方向。</p>`;
 }
 function renderCharacters() {
-  const participant = getActiveParticipant(); const list = byId("character-list"); list.innerHTML = "";
-  participant.characters.forEach((character, index) => {
+  const progress = getActiveNeedProgress(); const list = byId("character-list"); list.innerHTML = "";
+  (progress?.characters || []).forEach((character, index) => {
     const fragment = byId("character-template").content.cloneNode(true); const card = fragment.querySelector(".character-card");
     fragment.querySelector(".card-title").textContent = `他者 ${String(index + 1).padStart(2, "0")}`;
     fragment.querySelectorAll("input").forEach((input) => { input.value = character[input.dataset.field] || ""; input.addEventListener("input", (event) => updateCharacter(character.id, input.dataset.field, event.target.value)); });
@@ -270,8 +333,8 @@ function renderCharacters() {
   });
 }
 function renderGenerationControls() {
-  const participant = getActiveParticipant(); const select = byId("character-select");
-  select.innerHTML = participant.characters.map((character) => `<option value="${character.id}">${character.name || "未命名角色"}</option>`).join(""); select.value = state.selectedCharacterId;
+  const progress = getActiveNeedProgress(); const select = byId("character-select");
+  select.innerHTML = (progress?.characters || []).map((character) => `<option value="${character.id}">${character.name || "未命名角色"}</option>`).join(""); select.value = state.selectedCharacterId;
   document.querySelectorAll("[data-condition]").forEach((button) => button.classList.toggle("active", button.dataset.condition === state.selectedCondition));
   document.querySelectorAll("[data-time]").forEach((button) => button.classList.toggle("active", button.dataset.time === state.selectedTimePoint));
   document.querySelector('[data-time="present"]').textContent = state.selectedCondition === "real" ? "現在" : "當下";
@@ -288,7 +351,8 @@ function renderPostcard() {
 }
 function renderMatrix() {
   const participant = getActiveParticipant();
-  byId("progress-matrix").innerHTML = participant.characters.map((character) => `<div class="matrix-row"><div class="matrix-role">${character.name || "未命名角色"}</div>${conditions.flatMap((condition) => timePoints.map((timePoint) => { const found = state.generations.find((generation) => generation.participantId === participant.id && generation.characterId === character.id && generation.condition === condition && generation.timePointType === timePoint); const timeLabel = timePoint === "present" ? (condition === "real" ? "現在" : "當下") : labels[timePoint]; return `<button class="matrix-cell ${found ? "generated" : "missing"}" type="button" data-character-id="${character.id}" data-condition="${condition}" data-time-point="${timePoint}" aria-pressed="${state.selectedCharacterId === character.id && state.selectedCondition === condition && state.selectedTimePoint === timePoint}"><small>${labels[condition]}</small>${timeLabel}</button>`; })).join("")}</div>`).join("");
+  const progress = getActiveNeedProgress();
+  byId("progress-matrix").innerHTML = (progress?.characters || []).map((character) => `<div class="matrix-row"><div class="matrix-role">${character.name || "未命名角色"}</div>${conditions.flatMap((condition) => timePoints.map((timePoint) => { const found = state.generations.find((generation) => generation.participantId === participant.id && generation.needIdSnapshot === participant.selectedNeedId && generation.characterId === character.id && generation.condition === condition && generation.timePointType === timePoint); const timeLabel = timePoint === "present" ? (condition === "real" ? "現在" : "當下") : labels[timePoint]; return `<button class="matrix-cell ${found ? "generated" : "missing"}" type="button" data-character-id="${character.id}" data-condition="${condition}" data-time-point="${timePoint}" aria-pressed="${state.selectedCharacterId === character.id && state.selectedCondition === condition && state.selectedTimePoint === timePoint}"><small>${labels[condition]}</small>${timeLabel}</button>`; })).join("")}</div>`).join("");
   document.querySelectorAll(".matrix-cell").forEach((button) => button.addEventListener("click", () => selectGenerationCell(button.dataset.characterId, button.dataset.condition, button.dataset.timePoint)));
 }
 function renderGeneratedViews() { renderPostcard(); renderMatrix(); }
@@ -298,8 +362,8 @@ function bindStaticEvents() {
   byId("participant-select").addEventListener("change", (event) => setActiveParticipant(event.target.value));
   byId("participant-code").addEventListener("input", (event) => updateParticipant("code", event.target.value));
   byId("interview-date").addEventListener("input", (event) => updateParticipant("interviewDate", event.target.value));
-  byId("add-participant").addEventListener("click", () => { const participant = createParticipant(state.participants.length + 1); state.participants.push(participant); state.activeParticipantId = participant.id; state.selectedCharacterId = participant.characters[0].id; saveState(); render(); });
-  byId("delete-participant").addEventListener("click", () => { if (state.participants.length <= 1 || !window.confirm("確定刪除這位參與者與其生成紀錄？")) return; const id = state.activeParticipantId; state.participants = state.participants.filter((participant) => participant.id !== id); state.generations = state.generations.filter((generation) => generation.participantId !== id); state.activeParticipantId = state.participants[0].id; state.selectedCharacterId = state.participants[0].characters[0].id; saveState(); render(); });
+  byId("add-participant").addEventListener("click", () => { const participant = createParticipant(state.participants.length + 1); state.participants.push(participant); state.activeParticipantId = participant.id; state.selectedCharacterId = ""; saveState(); render(); });
+  byId("delete-participant").addEventListener("click", () => { if (state.participants.length <= 1 || !window.confirm("確定刪除這位參與者與其生成紀錄？")) return; const id = state.activeParticipantId; state.participants = state.participants.filter((participant) => participant.id !== id); state.generations = state.generations.filter((generation) => generation.participantId !== id); state.activeParticipantId = state.participants[0].id; syncStateFromActiveNeed(); saveState(); render(); });
   byId("participant-next").addEventListener("click", () => { setView("need"); saveProgressToCloud(); }); byId("need-back").addEventListener("click", () => setView("participant")); byId("need-next").addEventListener("click", () => { setStep("event"); saveProgressToCloud(); });
   byId("return-to-participant").addEventListener("click", () => setView("participant"));
   byId("sidebar-participant").addEventListener("click", () => setView("participant"));
@@ -307,10 +371,10 @@ function bindStaticEvents() {
   document.querySelectorAll("[data-step]").forEach((button) => button.addEventListener("click", () => setStep(button.dataset.step)));
   document.querySelectorAll("[data-go-step]").forEach((button) => button.addEventListener("click", () => setStep(button.dataset.goStep)));
   const fields = { "real-event": "realEventDescription", "counterfactual-event": "counterfactualDescription", "real-past-time": "realPastTimePoint", "real-future-time": "realFutureTimePoint", "counterfactual-past-time": "counterfactualPastTimePoint", "counterfactual-future-time": "counterfactualFutureTimePoint" };
-  Object.entries(fields).forEach(([id, field]) => byId(id).addEventListener("input", (event) => updateParticipant(field, event.target.value)));
-  byId("character-select").addEventListener("change", (event) => { state.selectedCharacterId = event.target.value; saveState(); renderGeneratedViews(); });
-  document.querySelectorAll("[data-condition]").forEach((button) => button.addEventListener("click", () => { state.selectedCondition = button.dataset.condition; saveState(); renderGenerationControls(); renderGeneratedViews(); }));
-  document.querySelectorAll("[data-time]").forEach((button) => button.addEventListener("click", () => { state.selectedTimePoint = button.dataset.time; saveState(); renderGenerationControls(); renderGeneratedViews(); }));
+  Object.entries(fields).forEach(([id, field]) => byId(id).addEventListener("input", (event) => { updateActiveNeedProgress({ [field]: event.target.value }); renderGeneratedViews(); }));
+  byId("character-select").addEventListener("change", (event) => { state.selectedCharacterId = event.target.value; updateActiveNeedProgress({ selectedCharacterId: event.target.value }); saveState(); renderGeneratedViews(); });
+  document.querySelectorAll("[data-condition]").forEach((button) => button.addEventListener("click", () => { state.selectedCondition = button.dataset.condition; updateActiveNeedProgress({ selectedCondition: state.selectedCondition }); saveState(); renderGenerationControls(); renderGeneratedViews(); }));
+  document.querySelectorAll("[data-time]").forEach((button) => button.addEventListener("click", () => { state.selectedTimePoint = button.dataset.time; updateActiveNeedProgress({ selectedTimePoint: state.selectedTimePoint }); saveState(); renderGenerationControls(); renderGeneratedViews(); }));
   byId("generate-button").addEventListener("click", async () => {
     if (!hasRequiredGenerationData() || state.isGenerating) return; state.isGenerating = true; state.generationError = ""; renderGenerationControls(); renderPostcard();
     try { upsertGeneration(await createApiGeneration()); } catch (error) { state.generationError = error.message; upsertGeneration(createMockGeneration()); }

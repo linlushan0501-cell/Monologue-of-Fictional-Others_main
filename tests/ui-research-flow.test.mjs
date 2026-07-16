@@ -65,6 +65,12 @@ assert.match(script, /participants:/, "State should store multiple participants.
 assert.match(script, /activeParticipantId/, "State should track the active participant.");
 assert.match(script, /getActiveParticipant/, "Code should read data through the active participant.");
 assert.match(script, /participantId === participant\.id/, "Generated records should be scoped to the active participant.");
+assert.match(script, /needProgressById/, "Each participant should keep independent progress for all needs.");
+assert.match(script, /function createNeedProgress\(needId\)/, "Each need should receive its own event, character, and navigation state.");
+assert.match(script, /function getActiveNeedProgress\(\)/, "Forms should read from the active need progress.");
+assert.match(script, /function updateActiveNeedProgress\(patch\)/, "Form edits should update only the active need.");
+assert.match(script, /needIdSnapshot === participant\.selectedNeedId/, "Generation views should only show records for the selected need.");
+assert.match(script, /participant\.selectedNeedId.*characterId.*condition.*timePoint/s, "Generation IDs should include the selected need.");
 
 assert.doesNotMatch(html + script, /此時此刻/, "The UI/mock output should not use the stiff phrase 此時此刻.");
 assert.doesNotMatch(html + script, /我站在/, "Mock monologues should not force a spatial time-travel opening.");
