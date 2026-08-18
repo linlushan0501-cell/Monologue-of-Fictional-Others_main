@@ -13,10 +13,11 @@ for (const id of ["physiological", "safety", "belonging", "esteem", "self-actual
 assert.match(script, /selectedNeedId/, "Participant state should store the selected need id.");
 assert.match(script, /needIdSnapshot/, "Generation records should snapshot the selected need.");
 assert.match(script, /needQuestionSnapshot/, "Generation records should snapshot the guiding question.");
-assert.match(script, /imageStatus:\s*["']reserved["']/, "Generation records should reserve image state.");
+assert.match(script, /const promptVersion = "openai-notion-v4"/, "The browser should send prompt V4.");
+assert.doesNotMatch(script, /generatedImageUrl|imageStatus/, "Browser generation records should not retain image state.");
 assert.doesNotMatch(script, /relationship:\s*character\.relationship/, "Generation requests should not send relationship.");
 
-for (const id of ["participant-view", "need-view", "workspace-view", "need-list", "need-next", "image-placeholder", "result-source"]) {
+for (const id of ["participant-view", "need-view", "workspace-view", "need-list", "need-next", "result-source"]) {
   assert.match(html, new RegExp(`id=["']${id}["']`), `HTML should include ${id}.`);
 }
 assert.match(script, /function selectNeed\(needId\)/, "Need cards should update participant selection.");
@@ -25,13 +26,12 @@ assert.match(script, /window\.confirm/, "Participant deletion should require con
 assert.match(html, /id="selected-need-context"/, "Event view should show the selected need prompt.");
 assert.doesNotMatch(html, /data-field="relationship"/, "Role UI should not include relationship.");
 assert.match(script, /function selectGenerationCell\(characterId, condition, timePoint\)/, "Progress cells should be selectable.");
-assert.match(html + script, /圖片功能預留/, "The image region should explain its reserved state.");
+assert.doesNotMatch(html + script, /image-placeholder|圖片功能預留|後續階段串接生成/, "The image placeholder should be fully removed.");
 
 assert.match(css, /--ink:\s*#0a0a0a/, "Visual system should use near-black ink.");
 assert.match(css, /:focus-visible/, "Keyboard focus should be visible.");
 assert.match(css, /@media\s*\(max-width:\s*900px\)/, "Tablet layout should be responsive.");
 assert.match(css, /@media\s*\(max-width:\s*640px\)/, "Mobile layout should be responsive.");
-assert.match(css, /\.image-placeholder\[data-state=["']reserved["']\]/, "Reserved image state should be styled.");
 assert.doesNotMatch(html, /01 \/ Participant|建立或選擇參與者|下一步：設定他者|至少 2 位，最多 3 位|新增第三位他者|下一步：開始生成|一次生成一個組合/, "Removed helper copy and controls should stay removed.");
 assert.match(html, /id="need-back"[^>]*aria-label="返回"/, "Need view should use an accessible back arrow.");
 assert.match(script, /characters:\s*\[createCharacter\(1\), createCharacter\(2\), createCharacter\(3\)\]/, "Participants should start with exactly three roles.");
@@ -85,4 +85,7 @@ assert.match(html + script, /反事實/, "The experimental condition should be l
 assert.doesNotMatch(html + script, /請先完成目前條件/, "The UI should not show extra instructional hint text.");
 
 assert.doesNotMatch(html + script, /核可|退回|重生|審閱/, "The experiment UI should not imply subjective review/regeneration.");
-assert.match(html, /<span class="stamp">V3<\/span>/, "The UI version stamp should match the current prompt version.");
+assert.match(html, /<span class="stamp">V4<\/span>/, "The UI version stamp should match prompt V4.");
+assert.match(compactCss, /\.result-card\{[^}]*height:380px[^}]*grid-template-columns:1fr/, "Desktop result cards should keep a fixed height and use the full width.");
+assert.match(compactCss, /\.result-card>\.stamp\{position:absolute;top:18px;right:18px/, "The V4 stamp should sit in the top-right corner.");
+assert.doesNotMatch(compactCss, /\.result-copy[^}]*overflow-y:\s*(auto|scroll)/, "The desktop monologue should not use internal scrolling.");

@@ -14,8 +14,8 @@ const conditions = ["real", "counterfactual"];
 const timePoints = ["past", "present", "future"];
 const storageKey = "research-monologue-dashboard-static-v1";
 const deviceIdKey = `${storageKey}-device-id`;
-const promptVersion = "openai-notion-v3";
-const promptVersionReason = "v3: 避免複述輸入敘事；以角色脈絡生成獨白。";
+const promptVersion = "openai-notion-v4";
+const promptVersionReason = "v4: 強化他者第一人稱觀點與敘事層次；避免把參與者輸入視為訊息或複誦；篇幅調整為 400–450 字。";
 const promptVersionReasonKey = `${storageKey}-${promptVersion}-reason`;
 const labels = { real: "真實", counterfactual: "反事實", past: "過去", present: "當下", future: "未來" };
 
@@ -265,7 +265,7 @@ function createMockGeneration() {
     condition: state.selectedCondition, timePointType: state.selectedTimePoint, timePointValue: getTimePointValue(state.selectedCondition, state.selectedTimePoint),
     generatedContent: `【${character.name}】${pickVariant(openings, seed)}${pickVariant(middles, seed, 1)}我只是希望，這一次你不用獨自把所有事情撐完。`,
     needIdSnapshot: participant.selectedNeedId, needLabelSnapshot: participant.selectedNeedLabel, needQuestionSnapshot: participant.selectedNeedQuestion,
-    generatedImageUrl: "", imageStatus: "reserved", source: "mock", generationTimestamp: new Date().toISOString(), promptVersion: "static-prototype-v3", notionUrl: "",
+    source: "mock", generationTimestamp: new Date().toISOString(), promptVersion: "static-prototype-v4", notionUrl: "",
   };
 }
 function createGenerationRequest() {
@@ -285,7 +285,7 @@ async function createApiGeneration() {
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "生成失敗");
   localStorage.setItem(promptVersionReasonKey, "recorded");
-  return { ...payload.generation, source: "api", imageStatus: "reserved" };
+  return { ...payload.generation, source: "api" };
 }
 function upsertGeneration(generation) { state.generations = [...state.generations.filter((item) => item.id !== generation.id), generation]; saveState(); }
 function selectGenerationCell(characterId, condition, timePoint) {

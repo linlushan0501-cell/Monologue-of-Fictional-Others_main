@@ -1,7 +1,7 @@
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const NOTION_PAGES_URL = "https://api.notion.com/v1/pages";
 const NOTION_VERSION = "2026-03-11";
-const PROMPT_VERSION = "openai-notion-v3";
+const PROMPT_VERSION = "openai-notion-v4";
 
 function sendJson(response, statusCode, payload) {
   response.statusCode = statusCode;
@@ -14,7 +14,7 @@ function trimText(value, maxLength = 1900) {
   return text.length > maxLength ? `${text.slice(0, maxLength - 1)}...` : text;
 }
 
-function limitGeneratedText(value, maxLength = 220) {
+function limitGeneratedText(value, maxLength = 450) {
   return String(value || "").trim().slice(0, maxLength);
 }
 
@@ -76,7 +76,9 @@ function buildPrompt(record) {
 
   return [
     "任務：生成一段繁體中文的第一人稱虛構他者獨白。",
-    "敘事者是「角色」本人，不是研究者，也不是參與者。角色要用自己的關係位置、知道的事情、語氣和盲點說話。",
+    "敘事者是「角色」本人，不是研究者，也不是參與者。角色要從自己的關係位置、有限知情範圍、價值判斷、語氣和盲點出發。",
+    "角色沒有看過、聽過或收到參與者輸入的文字。輸入故事只供你理解背景，不是參與者傳給角色的訊息。",
+    "不得引用、回覆、複誦或評論參與者的原句，也不得寫成角色剛聽完故事後給參與者的回應。",
     "反事實不是角色本身的反事實；反事實只代表「關鍵事件情境」改成使用者輸入的反事實版本。角色仍然是同一個敘事視角。",
     "真實條件只根據真實關鍵事件；反事實條件只根據反事實關鍵事件。不要把兩個情境混成角色自己的如果人生。",
     "",
@@ -90,12 +92,15 @@ function buildPrompt(record) {
     "",
     "語氣與結構限制：",
     "不要用「如果...」作為開頭，也不要用「我想，到了...」「在某年...」「假如我是...」這種把設定念出來的句子。",
-    "第一句必須直接進入角色的身體動作、感官細節、正在忍住的話，或對參與者的具體反應。",
+    "第一句直接進入角色此刻的注意、念頭、動作、感官或尚未說出口的判斷；不要交代自己正在回應一段敘述。",
+    "全篇維持角色本人的第一人稱視角；第一人稱視角不等於每句或第一句都要以「我」開頭。",
     "不要說明你正在使用真實、反事實、過去、當下、未來這些欄位。",
     "不要每次都用同一種句型。依角色關係調整距離感：親密角色可以有遲疑、責備、心疼；較遠角色可以有克制、旁觀、誤解。",
     "避免研究摘要、診斷、人生建議、道德評判。不要把症狀或團體反應講成通用模板。",
     "直接進入第一人稱現場，可以稱呼參與者為「你」，但要符合角色關係。",
-    "不要把使用者輸入的敘事內文整段換句話重述；先理解事件、關係和情緒位置，再只挑角色此刻真的會注意、誤解、迴避或說出口的部分。",
+    "不要把使用者輸入的敘事內文整段換句話重述；事件只能形成角色所處的背景與壓力，不可成為逐句改寫素材。",
+    "獨白必須呈現角色自己的觀點：他如何理解或誤解局面、想維護什麼、害怕失去什麼、對參與者抱持何種矛盾，以及哪些話只敢留在心裡。",
+    "讓觀點逐層推進：從表層注意或判斷，走向關係中的拉扯、自我辯護或盲點，再抵達角色仍無法完全說清楚的核心。不要整理成事件摘要。",
     "物件、場景或日常細節可以出現，但必須有角色原因：它能暴露職務、關係、時間狀態或情緒防衛。不要反覆使用咖啡、桌子、紙箱、滑鼠、冷掉等可替換道具模板。",
     "每次選擇一種不同的獨白形式，例如壓抑短句、碎念式辯解、很冷靜的交代、突然漏出的責備、沒說出口的告白、命令式自我控制、記憶片段拼接。形式要貼合角色，不要在文中說明你選了哪一種。",
     "句子長短、停頓、稱呼方式和情緒外露程度要隨角色改變；不要每段都用「我把...」「其實我...」「我只是...」「我怕...」的固定推進。",
@@ -111,16 +116,21 @@ function buildPrompt(record) {
     `本次應採用的事件情境：${selectedScenario}`,
     `另一個情境僅供區分，不可混用：${contrastScenario || "-"}`,
     "",
-    "輸出限制：只輸出獨白正文，最多 220 字。不要加標題、括號註解、欄位名稱或條列。",
+    "輸出限制：只輸出獨白正文，控制在 400 至 450 個繁體中文字（包含標點）。不要加標題、括號註解、欄位名稱或條列。",
   ].join("\n");
 }
 
-async function createOpenAiText(record) {
-  const openAiKey = process.env.OPENAI_API_KEY;
-  if (!openAiKey) {
-    throw new Error("Missing OPENAI_API_KEY.");
-  }
+function buildExpansionPrompt(record, draft) {
+  return [
+    buildPrompt(record),
+    "",
+    "以下初稿不足 400 字。請重寫並擴充到 400 至 450 字，而不是在末尾機械補句。",
+    "保留角色第一人稱視角與原有情緒方向，增加角色自己的判斷、矛盾、盲點和關係層次；仍不得複誦或回覆參與者的輸入。",
+    `初稿：${draft}`,
+  ].join("\n");
+}
 
+async function requestOpenAiText(openAiKey, prompt) {
   const response = await fetch(OPENAI_RESPONSES_URL, {
     method: "POST",
     headers: {
@@ -129,16 +139,27 @@ async function createOpenAiText(record) {
     },
     body: JSON.stringify({
       model: process.env.OPENAI_TEXT_MODEL || "gpt-5.5",
-      input: buildPrompt(record),
+      input: prompt,
+      max_output_tokens: 1400,
     }),
   });
 
   const payload = await response.json();
-  if (!response.ok) {
-    throw new Error(payload.error?.message || "OpenAI generation failed.");
+  if (!response.ok) throw new Error(payload.error?.message || "OpenAI generation failed.");
+  return extractOpenAiText(payload);
+}
+
+async function createOpenAiText(record) {
+  const openAiKey = process.env.OPENAI_API_KEY;
+  if (!openAiKey) {
+    throw new Error("Missing OPENAI_API_KEY.");
   }
 
-  return extractOpenAiText(payload);
+  let generatedText = await requestOpenAiText(openAiKey, buildPrompt(record));
+  if (generatedText.length < 400) {
+    generatedText = await requestOpenAiText(openAiKey, buildExpansionPrompt(record, generatedText));
+  }
+  return limitGeneratedText(generatedText);
 }
 
 async function createNotionPage(record) {
@@ -168,7 +189,6 @@ async function createNotionPage(record) {
     ["prompt_version", record.prompt_version],
     ["prompt_version_reason", record.prompt_version_reason],
     ["generated_text", record.generated_text],
-    ["generated_image_url", record.generated_image_url || ""],
     ["timestamp", record.timestamp],
   ];
 
@@ -218,23 +238,10 @@ async function createNotionTableRow(record, notionKey, databaseId) {
     time_point_label: { rich_text: notionRichText(record.time_point_label) },
     character: { rich_text: notionRichText(record.character) },
     generated_text: { rich_text: notionRichText(record.generated_text) },
-    "image URL": { url: record.generated_image_url || null },
     time: { date: { start: record.timestamp } },
     prompt_version: { rich_text: notionRichText(record.prompt_version) },
     prompt_version_reason: { rich_text: notionOptionalRichText(record.prompt_version_reason) },
   };
-
-  if (record.generated_image_url) {
-    properties.image = {
-      files: [
-        {
-          name: "generated image",
-          type: "external",
-          external: { url: record.generated_image_url },
-        },
-      ],
-    };
-  }
 
   const response = await fetch(NOTION_PAGES_URL, {
     method: "POST",
@@ -280,7 +287,6 @@ export default async function handler(request, response) {
       counterfactual_event_description: trimText(body.counterfactual_event_description, 1600),
       prompt_version: body.prompt_version || PROMPT_VERSION,
       prompt_version_reason: trimText(body.prompt_version_reason, 500),
-      generated_image_url: "",
       timestamp: new Date().toISOString(),
     };
 
@@ -289,7 +295,7 @@ export default async function handler(request, response) {
       return;
     }
 
-    const generatedText = limitGeneratedText(await createOpenAiText(record));
+    const generatedText = await createOpenAiText(record);
     const completedRecord = {
       ...record,
       generated_text: generatedText,
@@ -312,8 +318,6 @@ export default async function handler(request, response) {
         timePointType: record.time_point_type,
         timePointValue: record.time_point_label,
         generatedContent: generatedText,
-        generatedImageUrl: record.generated_image_url,
-        imageStatus: "reserved",
         source: "api",
         generationTimestamp: record.timestamp,
         promptVersion: record.prompt_version,
