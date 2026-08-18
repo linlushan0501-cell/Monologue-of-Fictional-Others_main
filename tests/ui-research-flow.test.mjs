@@ -92,3 +92,4 @@ assert.match(compactCss, /\.result-card\{[^}]*grid-template-columns:1fr[^}]*padd
 assert.match(compactCss, /\.result-card>\.stamp\{position:absolute;top:18px;right:18px/, "The V4 stamp should sit in the top-right corner.");
 assert.match(compactCss, /\.result-meta\{position:absolute;top:18px;left:26px/, "The status badge should align vertically with V4.");
 assert.doesNotMatch(compactCss, /\.result-copy[^}]*overflow-y:\s*(auto|scroll)/, "The desktop monologue should not use internal scrolling.");
+assert.match(compactCss, /#generate-button\{transform:translateY\(-10px\)\}/, "The generate button should keep comfortable bottom spacing.");
