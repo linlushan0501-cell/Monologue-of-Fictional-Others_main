@@ -86,6 +86,9 @@ assert.doesNotMatch(html + script, /請先完成目前條件/, "The UI should no
 
 assert.doesNotMatch(html + script, /核可|退回|重生|審閱/, "The experiment UI should not imply subjective review/regeneration.");
 assert.match(html, /<span class="stamp">V4<\/span>/, "The UI version stamp should match prompt V4.");
-assert.match(compactCss, /\.result-card\{[^}]*height:380px[^}]*grid-template-columns:1fr/, "Desktop result cards should keep a fixed height and use the full width.");
+assert.match(compactCss, /\.generation-layout\{[^}]*height:380px[^}]*align-items:stretch/, "Desktop generation controls and result should share one fixed row height.");
+assert.match(compactCss, /\.generation-controls,\.result-card\{height:100%/, "The left and right generation cards should align vertically.");
+assert.match(compactCss, /\.result-card\{[^}]*grid-template-columns:1fr[^}]*padding:26px/, "The result card should use full width and equal padding.");
 assert.match(compactCss, /\.result-card>\.stamp\{position:absolute;top:18px;right:18px/, "The V4 stamp should sit in the top-right corner.");
+assert.match(compactCss, /\.result-meta\{position:absolute;top:18px;left:26px/, "The status badge should align vertically with V4.");
 assert.doesNotMatch(compactCss, /\.result-copy[^}]*overflow-y:\s*(auto|scroll)/, "The desktop monologue should not use internal scrolling.");

@@ -16,9 +16,12 @@ assert.doesNotMatch(api, /generated_image_url|generatedImageUrl|imageStatus|"ima
 assert.match(api, /event_type:\s*\{\s*select:\s*\{\s*name:\s*record\.need_label_snapshot/, "Notion rows should store the selected event type.");
 assert.match(api, /characterId:\s*body\.character_id/, "API response should preserve the character id sent by the browser.");
 assert.match(api, /const PROMPT_VERSION = "openai-notion-v4"/, "The generation API should default to prompt V4.");
-assert.match(api, /function limitGeneratedText\(value, maxLength = 450\)/, "Generated text should have a hard 450-character limit.");
-assert.match(api, /if \(generatedText\.length < 400\)/, "Short first drafts should receive one expansion pass.");
-assert.match(api, /buildExpansionPrompt\(record, generatedText\)/, "The expansion pass should preserve the role and scenario context.");
+assert.match(api, /const MIN_MONOLOGUE_LENGTH = 350/, "V4 should allow fifty characters below the target range.");
+assert.match(api, /const MAX_MONOLOGUE_LENGTH = 500/, "V4 should allow fifty characters above the target range.");
+assert.match(api, /function isCompleteMonologue\(value\)/, "V4 should validate length and a complete closing sentence.");
+assert.match(api, /while \(!isCompleteMonologue\(generatedText\) && revisionCount < 2\)/, "Incomplete drafts should be rewritten rather than cut off.");
+assert.match(api, /buildRevisionPrompt\(record, generatedText\)/, "Revision should preserve role and scenario context.");
+assert.doesNotMatch(api, /\.slice\(0,\s*(450|MAX_MONOLOGUE_LENGTH)\)/, "V4 must not cut a monologue at a raw character boundary.");
 assert.match(api, /if \(timePointType === "present"\) return condition === "real" \? "現在" : "當下"/, "Notion time select should distinguish real and counterfactual present.");
 
 assert.match(api, /process\.env\.OPENAI_API_KEY/, "The API function should read the OpenAI key on the server.");
@@ -45,7 +48,7 @@ assert.match(api, /不要把使用者輸入的敘事內文整段換句話重述/
 assert.match(api, /角色沒有看過、聽過或收到參與者輸入的文字/, "The prompt should prevent treating the source story as a message to the role.");
 assert.match(api, /不得引用、回覆、複誦或評論參與者的原句/, "The role should not answer the participant's submitted wording.");
 assert.match(api, /第一人稱視角不等於每句或第一句都要以「我」開頭/, "The prompt should keep first-person perspective without forcing an I-opening.");
-assert.match(api, /400 至 450 個繁體中文字/, "V4 should request the approved monologue length.");
+assert.match(api, /以 400 至 450 字為目標，可在 350 至 500 字之間/, "V4 should request the approved flexible range.");
 assert.match(api, /物件、場景或日常細節可以出現，但必須有角色原因/, "The prompt should allow grounded details while preventing repeated prop templates.");
 assert.match(api, /每次選擇一種不同的獨白形式/, "The prompt should require varied monologue forms instead of one repeated structure.");
 

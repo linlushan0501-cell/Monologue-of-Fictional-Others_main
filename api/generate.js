@@ -2,6 +2,8 @@ const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const NOTION_PAGES_URL = "https://api.notion.com/v1/pages";
 const NOTION_VERSION = "2026-03-11";
 const PROMPT_VERSION = "openai-notion-v4";
+const MIN_MONOLOGUE_LENGTH = 350;
+const MAX_MONOLOGUE_LENGTH = 500;
 
 function sendJson(response, statusCode, payload) {
   response.statusCode = statusCode;
@@ -14,8 +16,9 @@ function trimText(value, maxLength = 1900) {
   return text.length > maxLength ? `${text.slice(0, maxLength - 1)}...` : text;
 }
 
-function limitGeneratedText(value, maxLength = 450) {
-  return String(value || "").trim().slice(0, maxLength);
+function isCompleteMonologue(value) {
+  const text = String(value || "").trim();
+  return text.length >= MIN_MONOLOGUE_LENGTH && text.length <= MAX_MONOLOGUE_LENGTH && /[。！？…」』）)]$/.test(text);
 }
 
 function notionRichText(value) {
@@ -116,16 +119,16 @@ function buildPrompt(record) {
     `本次應採用的事件情境：${selectedScenario}`,
     `另一個情境僅供區分，不可混用：${contrastScenario || "-"}`,
     "",
-    "輸出限制：只輸出獨白正文，控制在 400 至 450 個繁體中文字（包含標點）。不要加標題、括號註解、欄位名稱或條列。",
+    "輸出限制：只輸出獨白正文，以 400 至 450 字為目標，可在 350 至 500 字之間（包含標點）。必須完成整段思想與最後一句，並以完整標點收尾；不要加標題、括號註解、欄位名稱或條列。",
   ].join("\n");
 }
 
-function buildExpansionPrompt(record, draft) {
+function buildRevisionPrompt(record, draft) {
   return [
     buildPrompt(record),
     "",
-    "以下初稿不足 400 字。請重寫並擴充到 400 至 450 字，而不是在末尾機械補句。",
-    "保留角色第一人稱視角與原有情緒方向，增加角色自己的判斷、矛盾、盲點和關係層次；仍不得複誦或回覆參與者的輸入。",
+    "以下初稿的長度或結尾不符合要求。請完整重寫為 350 至 500 字，目標約 400 至 450 字；必須讓思想、情緒推進與最後一句自然完成，禁止在句中中斷。",
+    "保留角色第一人稱視角與原有情緒方向，增加角色自己的判斷、矛盾、盲點和關係層次；仍不得複誦或回覆參與者的輸入，也不要在末尾機械補句。",
     `初稿：${draft}`,
   ].join("\n");
 }
@@ -156,10 +159,12 @@ async function createOpenAiText(record) {
   }
 
   let generatedText = await requestOpenAiText(openAiKey, buildPrompt(record));
-  if (generatedText.length < 400) {
-    generatedText = await requestOpenAiText(openAiKey, buildExpansionPrompt(record, generatedText));
+  let revisionCount = 0;
+  while (!isCompleteMonologue(generatedText) && revisionCount < 2) {
+    generatedText = await requestOpenAiText(openAiKey, buildRevisionPrompt(record, generatedText));
+    revisionCount += 1;
   }
-  return limitGeneratedText(generatedText);
+  return generatedText.trim();
 }
 
 async function createNotionPage(record) {
